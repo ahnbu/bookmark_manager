@@ -15,7 +15,7 @@ import { Checkbox } from '@/components/ui/checkbox'
 import { ExportData } from '@/components/ExportData'
 import { ImportData } from '@/components/ImportData'
 import { ImportBookmarks } from '@/components/ImportBookmarks'
-import { Settings, Columns, Grid3X3, LayoutGrid, Trash2, GripVertical, Database, Upload } from 'lucide-react'
+import { Settings, Columns, Grid3X3, LayoutGrid, Trash2, GripVertical, Database, Upload, X } from 'lucide-react'
 import { clearFailedDomains, getCacheStats } from '@/lib/faviconCache'
 
 interface SortableCategoryItemProps {
@@ -132,12 +132,12 @@ export function SettingsPanel() {
           설정
         </Button>
       </DialogTrigger>
-      <DialogContent>
-        <DialogHeader>
+      <DialogContent className="max-h-[90vh] overflow-y-auto sm:max-h-none sm:overflow-y-visible">
+        <DialogHeader className="relative">
           <DialogTitle>설정</DialogTitle>
         </DialogHeader>
 
-        <div className="space-y-6">
+        <div className="space-y-6 px-1 sm:px-0">
           <div className="space-y-3">
             <Label className="text-base font-medium">레이아웃</Label>
             {/*<p className="text-sm text-muted-foreground">

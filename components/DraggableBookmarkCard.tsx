@@ -38,10 +38,13 @@ export function DraggableBookmarkCard({ bookmark }: DraggableBookmarkCardProps) 
       ref={setNodeRef}
       style={style}
       {...attributes}
-      {...(!isModalOpen ? listeners : {})}
-      className="touch-none"
     >
-      <BookmarkCard bookmark={bookmark} onModalStateChange={setIsModalOpen} />
+      <BookmarkCard
+        bookmark={bookmark}
+        onModalStateChange={setIsModalOpen}
+        dragHandleProps={!isModalOpen ? listeners : {}}
+        desktopDragProps={!isModalOpen ? listeners : {}}
+      />
     </div>
   )
 }

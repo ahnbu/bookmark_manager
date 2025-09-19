@@ -10,15 +10,17 @@ import { Input } from '@/components/ui/input'
 import { Textarea } from '@/components/ui/textarea'
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog'
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '@/components/ui/dropdown-menu'
-import { ExternalLink, Edit2, Trash2, MoreVertical, Globe, RefreshCw, Upload, Copy } from 'lucide-react'
+import { ExternalLink, Edit2, Trash2, MoreVertical, Globe, RefreshCw, Upload, Copy, GripVertical } from 'lucide-react'
 import { getFaviconFromCache, loadFaviconWithCache } from '@/lib/faviconCache'
 
 interface BookmarkCardProps {
   bookmark: Bookmark
   onModalStateChange?: (isOpen: boolean) => void
+  dragHandleProps?: any
+  desktopDragProps?: any
 }
 
-export function BookmarkCard({ bookmark, onModalStateChange }: BookmarkCardProps) {
+export function BookmarkCard({ bookmark, onModalStateChange, dragHandleProps, desktopDragProps }: BookmarkCardProps) {
   const { updateBookmark, deleteBookmark, getBookmarkById, addBookmark, getBookmarksByCategory } = useBookmarkStore()
   const { settings } = useSettingsStore()
 
@@ -114,6 +116,30 @@ export function BookmarkCard({ bookmark, onModalStateChange }: BookmarkCardProps
     setIsEditing(false)
   }
 
+  const handleKeyDown = (e: React.KeyboardEvent) => {
+    if (e.key === 'Enter' && !e.shiftKey && !e.ctrlKey) {
+      e.preventDefault()
+      if (editData.name.trim() && editData.url.trim()) {
+        handleSaveEdit()
+      }
+    }
+    if (e.key === 'Escape') {
+      handleCancelEdit()
+    }
+  }
+
+  const handleTextareaKeyDown = (e: React.KeyboardEvent) => {
+    if (e.key === 'Enter' && e.ctrlKey) {
+      e.preventDefault()
+      if (editData.name.trim() && editData.url.trim()) {
+        handleSaveEdit()
+      }
+    }
+    if (e.key === 'Escape') {
+      handleCancelEdit()
+    }
+  }
+
   const handleDelete = () => {
     deleteBookmark(currentBookmark.id)
     setIsDeleteDialogOpen(false)
@@ -201,6 +227,15 @@ export function BookmarkCard({ bookmark, onModalStateChange }: BookmarkCardProps
       <Card className="group hover:shadow-md transition-shadow cursor-pointer">
         <CardContent className="p-3">
           <div className="flex items-start gap-3">
+            {/* Drag Handle - Mobile only */}
+            <div
+              className="flex-shrink-0 sm:hidden opacity-30 group-hover:opacity-70 transition-opacity cursor-grab active:cursor-grabbing p-1 -ml-1"
+              {...dragHandleProps}
+              title="드래그하여 순서 변경"
+            >
+              <GripVertical className="w-4 h-4 text-muted-foreground" />
+            </div>
+
             {/* Favicon */}
             <div className="w-4 h-4 mt-1 flex-shrink-0">
               {currentBookmark.isBlacklisted ? (
@@ -225,7 +260,11 @@ export function BookmarkCard({ bookmark, onModalStateChange }: BookmarkCardProps
             </div>
 
             {/* Content */}
-            <div className="flex-1 min-w-0" onClick={handleOpenUrl}>
+            <div
+              className={`flex-1 min-w-0 ${desktopDragProps ? 'sm:cursor-grab sm:active:cursor-grabbing sm:touch-none' : ''}`}
+              onClick={handleOpenUrl}
+              {...(desktopDragProps ? desktopDragProps : {})}
+            >
               <div className="flex items-start justify-between gap-2">
                 <div className="flex-1 min-w-0">
                   <h4 className="font-medium text-sm truncate group-hover:text-primary">
@@ -262,8 +301,13 @@ export function BookmarkCard({ bookmark, onModalStateChange }: BookmarkCardProps
                     size="sm"
                     variant="ghost"
                     className="h-6 w-6 p-0"
+                    onClick={(e) => {
+                      e.stopPropagation()
+                      setIsEditing(true)
+                    }}
+                    title="북마크 수정"
                   >
-                    <ExternalLink className="h-3 w-3" />
+                    <Edit2 className="h-3 w-3" />
                   </Button>
                   <DropdownMenu>
                     <DropdownMenuTrigger asChild>
@@ -277,13 +321,6 @@ export function BookmarkCard({ bookmark, onModalStateChange }: BookmarkCardProps
                       </Button>
                     </DropdownMenuTrigger>
                     <DropdownMenuContent align="end">
-                      <DropdownMenuItem onClick={(e) => {
-                        e.stopPropagation()
-                        setIsEditing(true)
-                      }}>
-                        <Edit2 className="h-4 w-4 mr-2" />
-                        수정
-                      </DropdownMenuItem>
                       <DropdownMenuItem onClick={(e) => {
                         e.stopPropagation()
                         handleDuplicate()
@@ -343,7 +380,9 @@ export function BookmarkCard({ bookmark, onModalStateChange }: BookmarkCardProps
                 id="edit-name"
                 value={editData.name}
                 onChange={(e) => setEditData({ ...editData, name: e.target.value })}
+                onKeyDown={handleKeyDown}
                 placeholder="북마크 이름"
+                autoFocus
               />
             </div>
             <div>
@@ -354,6 +393,7 @@ export function BookmarkCard({ bookmark, onModalStateChange }: BookmarkCardProps
                 id="edit-url"
                 value={editData.url}
                 onChange={(e) => setEditData({ ...editData, url: e.target.value })}
+                onKeyDown={handleKeyDown}
                 placeholder="https://example.com"
               />
             </div>
@@ -365,7 +405,8 @@ export function BookmarkCard({ bookmark, onModalStateChange }: BookmarkCardProps
                 id="edit-description"
                 value={editData.description}
                 onChange={(e) => setEditData({ ...editData, description: e.target.value })}
-                placeholder="북마크에 대한 설명을 입력하세요"
+                onKeyDown={handleTextareaKeyDown}
+                placeholder="북마크에 대한 설명을 입력하세요 (Ctrl+Enter로 저장)"
                 rows={3}
               />
             </div>
