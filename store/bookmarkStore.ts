@@ -35,7 +35,7 @@ interface BookmarkStore {
 
   // Data loading
   loadData: () => Promise<void>
-  importBookmarks: (bookmarks: Bookmark[], categories?: Category[]) => Promise<void>
+  importBookmarks: (bookmarks: Bookmark[], categories?: Category[], replaceMode?: boolean) => Promise<void>
 
   // Migration
   migrateFromLocalStorage: () => Promise<void>
@@ -289,29 +289,51 @@ export const useBookmarkStore = create<BookmarkStore>((set, get) => ({
     }
   },
 
-  importBookmarks: async (bookmarks, categories = []) => {
+  importBookmarks: async (bookmarks, categories = [], replaceMode = false) => {
     try {
       set({ isLoading: true })
+
+      // replace 모드일 때 기존 데이터 삭제
+      if (replaceMode) {
+        const { bookmarks: existingBookmarks, categories: existingCategories } = get()
+
+        // 기존 북마크와 카테고리 삭제
+        await Promise.all([
+          ...existingBookmarks.map(bookmark => dbDeleteBookmark(bookmark.id)),
+          ...existingCategories.map(category => dbDeleteCategory(category.id))
+        ])
+
+        set({ bookmarks: [], categories: [] })
+      }
+
+      // 카테고리 ID 매핑 테이블 생성
+      const categoryIdMap: Record<string, string> = {}
 
       // 카테고리 먼저 생성
       const createdCategories = await Promise.all(
         categories.map(async (category) => {
-          const { id: _, createdAt, updatedAt, ...categoryData } = category
-          return await createCategory(categoryData)
+          const { id: oldId, createdAt, updatedAt, ...categoryData } = category
+          const newCategory = await createCategory(categoryData)
+          categoryIdMap[oldId] = newCategory.id
+          return newCategory
         })
       )
 
-      // 북마크 생성
+      // 북마크 생성 시 카테고리 ID 매핑 적용
       const createdBookmarks = await Promise.all(
         bookmarks.map(async (bookmark) => {
-          const { id: _, createdAt, updatedAt, ...bookmarkData } = bookmark
-          return await createBookmark(bookmarkData)
+          const { id: _, createdAt, updatedAt, categoryId: oldCategoryId, ...bookmarkData } = bookmark
+          const newCategoryId = categoryIdMap[oldCategoryId] || oldCategoryId
+          return await createBookmark({
+            ...bookmarkData,
+            categoryId: newCategoryId,
+          })
         })
       )
 
       set((state) => ({
-        categories: [...state.categories, ...createdCategories],
-        bookmarks: [...state.bookmarks, ...createdBookmarks],
+        categories: replaceMode ? createdCategories : [...state.categories, ...createdCategories],
+        bookmarks: replaceMode ? createdBookmarks : [...state.bookmarks, ...createdBookmarks],
         isLoading: false
       }))
     } catch (error) {

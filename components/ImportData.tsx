@@ -42,11 +42,11 @@ export function ImportData({ variant = 'outline', size = 'default' }: ImportData
 
       if (importMode === 'replace') {
         // 덮어쓰기: 기존 데이터 삭제 후 새 데이터 적용
-        await importBookmarks(processedData.bookmarks, processedData.categories)
+        await importBookmarks(processedData.bookmarks, processedData.categories, true)
       } else {
         // 병합: 새로운 ID로 생성하여 기존 데이터와 병합
         const dataWithNewIds = DataExporter.generateNewIds(processedData)
-        await importBookmarks(dataWithNewIds.bookmarks, dataWithNewIds.categories)
+        await importBookmarks(dataWithNewIds.bookmarks, dataWithNewIds.categories, false)
       }
 
       toast({
@@ -57,9 +57,23 @@ export function ImportData({ variant = 'outline', size = 'default' }: ImportData
       setIsOpen(false)
     } catch (error) {
       console.error('Import error:', error)
+
+      let errorMessage = '데이터베이스 저장 중 오류가 발생했습니다. 네트워크 연결과 Supabase 설정을 확인해주세요.'
+
+      if (error && typeof error === 'object') {
+        const errorObj = error as any
+        if (errorObj.code === '23503') {
+          errorMessage = '백업 파일의 데이터 구조에 문제가 있습니다. 카테고리와 북마크 간의 연결 정보가 올바르지 않습니다.'
+        } else if (errorObj.message?.includes('foreign key')) {
+          errorMessage = '백업 파일의 카테고리 정보가 손상되었습니다. 다른 백업 파일을 사용해보세요.'
+        } else if (errorObj.message?.includes('network')) {
+          errorMessage = '네트워크 연결에 문제가 있습니다. 인터넷 연결을 확인하고 다시 시도해주세요.'
+        }
+      }
+
       toast({
         title: '복원 실패',
-        description: error instanceof Error ? error.message : '데이터베이스 저장 중 오류가 발생했습니다. 네트워크 연결과 Supabase 설정을 확인해주세요.',
+        description: errorMessage,
         variant: 'destructive',
       })
     } finally {

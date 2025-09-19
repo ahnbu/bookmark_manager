@@ -47,9 +47,23 @@ export function ImportBookmarks({ variant = 'outline', size = 'default' }: Impor
       setIsOpen(false)
     } catch (error) {
       console.error('Import error:', error)
+
+      let errorMessage = '데이터베이스 저장 중 오류가 발생했습니다. 네트워크 연결과 Supabase 설정을 확인해주세요.'
+
+      if (error && typeof error === 'object') {
+        const errorObj = error as any
+        if (errorObj.code === '23503') {
+          errorMessage = '북마크 파일의 데이터 구조에 문제가 있습니다. 브라우저에서 새로 내보낸 파일을 사용해보세요.'
+        } else if (errorObj.message?.includes('foreign key')) {
+          errorMessage = '북마크 파일의 카테고리 정보가 손상되었습니다. 다른 북마크 파일을 사용해보세요.'
+        } else if (errorObj.message?.includes('network')) {
+          errorMessage = '네트워크 연결에 문제가 있습니다. 인터넷 연결을 확인하고 다시 시도해주세요.'
+        }
+      }
+
       toast({
         title: '가져오기 실패',
-        description: error instanceof Error ? error.message : '데이터베이스 저장 중 오류가 발생했습니다. 네트워크 연결과 Supabase 설정을 확인해주세요.',
+        description: errorMessage,
         variant: 'destructive',
       })
     } finally {
