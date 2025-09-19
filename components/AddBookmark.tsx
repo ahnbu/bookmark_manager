@@ -40,7 +40,7 @@ export function AddBookmark({ defaultCategoryId, children }: AddBookmarkProps) {
         description: formData.description.trim() || undefined,
         categoryId: selectedCategoryId,
         order: categoryBookmarks.length,
-        favicon: null, // 초기값은 null
+        favicon: undefined, // 초기값은 undefined
       }
 
       addBookmark(newBookmark)

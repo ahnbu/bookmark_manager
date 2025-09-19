@@ -58,12 +58,13 @@ export const useSettingsStore = create<SettingsStore>((set) => ({
   loadSettings: () => {
     try {
       const settings = storage.getSettings()
-      const mergedSettings = {
+      const mergedSettings: Settings = {
         ...defaultSettings,
         ...settings,
         displayOptions: {
-          ...defaultSettings.displayOptions,
-          ...settings.displayOptions,
+          showUrl: settings.displayOptions?.showUrl ?? defaultSettings.displayOptions!.showUrl,
+          showDescription: settings.displayOptions?.showDescription ?? defaultSettings.displayOptions!.showDescription,
+          hiddenCategories: settings.displayOptions?.hiddenCategories ?? defaultSettings.displayOptions!.hiddenCategories,
         },
       }
       set({ settings: mergedSettings })

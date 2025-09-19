@@ -313,7 +313,7 @@ export function BookmarkCard({ bookmark, onModalStateChange }: BookmarkCardProps
                         const fileInput = document.createElement('input')
                         fileInput.type = 'file'
                         fileInput.accept = 'image/*'
-                        fileInput.onchange = handleCustomFaviconUpload
+                        fileInput.onchange = (e) => handleCustomFaviconUpload(e as any)
                         fileInput.click()
                       }} disabled={isUploadingFavicon}>
                         <Upload className="h-4 w-4 mr-2" />

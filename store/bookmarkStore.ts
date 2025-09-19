@@ -320,7 +320,7 @@ export const useBookmarkStore = create<BookmarkStore>((set, get) => ({
         const newBookmarks = state.bookmarks.map((bookmark) => {
           const update = bookmarksToUpdate.find(u => u.id === bookmark.id)
           if (update) {
-            return { ...bookmark, favicon: update.favicon, updatedAt: new Date() }
+            return { ...bookmark, favicon: update.favicon || undefined, updatedAt: new Date() }
           }
           return bookmark
         })
