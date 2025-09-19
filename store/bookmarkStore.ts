@@ -2,6 +2,17 @@ import { create } from 'zustand'
 import { Bookmark, Category } from '@/lib/types'
 import { storage } from '@/lib/storage'
 import { loadFaviconWithCache } from '@/lib/faviconCache'
+import {
+  getBookmarks,
+  getCategories,
+  createBookmark,
+  updateBookmark as dbUpdateBookmark,
+  deleteBookmark as dbDeleteBookmark,
+  createCategory,
+  updateCategory as dbUpdateCategory,
+  deleteCategory as dbDeleteCategory,
+  updateMultipleBookmarks
+} from '@/lib/database'
 
 interface BookmarkStore {
   bookmarks: Bookmark[]
@@ -10,27 +21,30 @@ interface BookmarkStore {
   error: string | null
 
   // Bookmark actions
-  addBookmark: (bookmark: Omit<Bookmark, 'id' | 'createdAt' | 'updatedAt'>) => void
-  updateBookmark: (id: string, updates: Partial<Bookmark>) => void
-  deleteBookmark: (id: string) => void
-  moveBookmark: (id: string, newCategoryId: string, newOrder?: number) => void
+  addBookmark: (bookmark: Omit<Bookmark, 'id' | 'createdAt' | 'updatedAt'>) => Promise<void>
+  updateBookmark: (id: string, updates: Partial<Bookmark>) => Promise<void>
+  deleteBookmark: (id: string) => Promise<void>
+  moveBookmark: (id: string, newCategoryId: string, newOrder?: number) => Promise<void>
 
   // Category actions
-  addCategory: (category: Omit<Category, 'id' | 'createdAt' | 'updatedAt'>) => void
-  updateCategory: (id: string, updates: Partial<Category>) => void
-  deleteCategory: (id: string) => void
-  duplicateCategory: (id: string) => void
-  moveCategoryOrder: (id: string, newOrder: number) => void
+  addCategory: (category: Omit<Category, 'id' | 'createdAt' | 'updatedAt'>) => Promise<void>
+  updateCategory: (id: string, updates: Partial<Category>) => Promise<void>
+  deleteCategory: (id: string) => Promise<void>
+  duplicateCategory: (id: string) => Promise<void>
+  moveCategoryOrder: (id: string, newOrder: number) => Promise<void>
 
   // Data loading
-  loadData: () => void
-  importBookmarks: (bookmarks: Bookmark[], categories?: Category[]) => void
+  loadData: () => Promise<void>
+  importBookmarks: (bookmarks: Bookmark[], categories?: Category[]) => Promise<void>
+
+  // Migration
+  migrateFromLocalStorage: () => Promise<void>
+  migrateFavicons: () => Promise<void>
 
   // Utilities
   getBookmarksByCategory: (categoryId: string) => Bookmark[]
   getCategoryById: (id: string) => Category | undefined
   getBookmarkById: (id: string) => Bookmark | undefined
-  migrateFavicons: () => Promise<void>
 }
 
 export const useBookmarkStore = create<BookmarkStore>((set, get) => ({
@@ -39,64 +53,62 @@ export const useBookmarkStore = create<BookmarkStore>((set, get) => ({
   isLoading: false,
   error: null,
 
-  addBookmark: (bookmarkData) => {
-    const now = new Date()
-    const bookmark: Bookmark = {
-      id: crypto.randomUUID(),
-      ...bookmarkData,
-      createdAt: now,
-      updatedAt: now,
+  addBookmark: async (bookmarkData) => {
+    try {
+      const bookmark = await createBookmark(bookmarkData)
+      set((state) => ({
+        bookmarks: [...state.bookmarks, bookmark]
+      }))
+    } catch (error) {
+      console.error('Failed to add bookmark:', error)
+      set({ error: '북마크 추가에 실패했습니다.' })
     }
-
-    set((state) => {
-      const newBookmarks = [...state.bookmarks, bookmark]
-      storage.setBookmarks(newBookmarks)
-      return { bookmarks: newBookmarks }
-    })
   },
 
-  updateBookmark: (id, updates) => {
-    set((state) => {
-      const newBookmarks = state.bookmarks.map((bookmark) =>
-        bookmark.id === id
-          ? { ...bookmark, ...updates, updatedAt: new Date() }
-          : bookmark
-      )
-      storage.setBookmarks(newBookmarks)
-      return { bookmarks: newBookmarks }
-    })
+  updateBookmark: async (id, updates) => {
+    try {
+      const updatedBookmark = await dbUpdateBookmark(id, updates)
+      set((state) => ({
+        bookmarks: state.bookmarks.map((bookmark) =>
+          bookmark.id === id ? updatedBookmark : bookmark
+        )
+      }))
+    } catch (error) {
+      console.error('Failed to update bookmark:', error)
+      set({ error: '북마크 수정에 실패했습니다.' })
+    }
   },
 
-  deleteBookmark: (id) => {
-    set((state) => {
-      const newBookmarks = state.bookmarks.filter((bookmark) => bookmark.id !== id)
-      storage.setBookmarks(newBookmarks)
-      return { bookmarks: newBookmarks }
-    })
+  deleteBookmark: async (id) => {
+    try {
+      await dbDeleteBookmark(id)
+      set((state) => ({
+        bookmarks: state.bookmarks.filter((bookmark) => bookmark.id !== id)
+      }))
+    } catch (error) {
+      console.error('Failed to delete bookmark:', error)
+      set({ error: '북마크 삭제에 실패했습니다.' })
+    }
   },
 
-  moveBookmark: (id, newCategoryId, newOrder) => {
-    set((state) => {
-      const bookmark = state.bookmarks.find(b => b.id === id)
-      if (!bookmark) return state
+  moveBookmark: async (id, newCategoryId, newOrder) => {
+    try {
+      const { bookmarks } = get()
+      const bookmark = bookmarks.find(b => b.id === id)
+      if (!bookmark) return
 
-      let newBookmarks = [...state.bookmarks]
+      let updates: Partial<Bookmark> = {}
 
       // 다른 카테고리로 이동하는 경우
       if (bookmark.categoryId !== newCategoryId) {
-        const targetCategoryBookmarks = newBookmarks.filter(
+        const targetCategoryBookmarks = bookmarks.filter(
           b => b.categoryId === newCategoryId && b.id !== id
         )
         const finalOrder = newOrder ?? targetCategoryBookmarks.length
-
-        newBookmarks = newBookmarks.map(b =>
-          b.id === id
-            ? { ...b, categoryId: newCategoryId, order: finalOrder, updatedAt: new Date() }
-            : b
-        )
+        updates = { categoryId: newCategoryId, order: finalOrder }
       } else if (newOrder !== undefined) {
         // 같은 카테고리 내에서 순서 변경
-        const categoryBookmarks = newBookmarks
+        const categoryBookmarks = bookmarks
           .filter(b => b.categoryId === newCategoryId)
           .sort((a, b) => a.order - b.order)
 
@@ -104,173 +116,304 @@ export const useBookmarkStore = create<BookmarkStore>((set, get) => ({
         const targetIndex = Math.min(newOrder, categoryBookmarks.length - 1)
 
         if (currentIndex !== targetIndex) {
-          // 순서 재정렬
+          // 순서 재정렬을 위한 일괄 업데이트
           const reorderedBookmarks = [...categoryBookmarks]
           const [movedBookmark] = reorderedBookmarks.splice(currentIndex, 1)
           reorderedBookmarks.splice(targetIndex, 0, movedBookmark)
 
-          // 새로운 순서 적용
-          reorderedBookmarks.forEach((bookmark, index) => {
-            const bookmarkIndex = newBookmarks.findIndex(b => b.id === bookmark.id)
-            if (bookmarkIndex !== -1) {
-              newBookmarks[bookmarkIndex] = {
-                ...newBookmarks[bookmarkIndex],
-                order: index,
-                updatedAt: new Date()
-              }
-            }
-          })
+          const bulkUpdates = reorderedBookmarks.map((bookmark, index) => ({
+            id: bookmark.id,
+            updates: { order: index }
+          }))
+
+          await updateMultipleBookmarks(bulkUpdates)
+
+          // 상태 업데이트
+          set((state) => ({
+            bookmarks: state.bookmarks.map((bookmark) => {
+              const update = bulkUpdates.find(u => u.id === bookmark.id)
+              return update ? { ...bookmark, order: update.updates.order! } : bookmark
+            })
+          }))
+          return
         }
       }
 
-      storage.setBookmarks(newBookmarks)
-      return { bookmarks: newBookmarks }
-    })
-  },
-
-  addCategory: (categoryData) => {
-    const now = new Date()
-    const category: Category = {
-      id: crypto.randomUUID(),
-      ...categoryData,
-      createdAt: now,
-      updatedAt: now,
+      if (Object.keys(updates).length > 0) {
+        await get().updateBookmark(id, updates)
+      }
+    } catch (error) {
+      console.error('Failed to move bookmark:', error)
+      set({ error: '북마크 이동에 실패했습니다.' })
     }
-
-    set((state) => {
-      const newCategories = [...state.categories, category]
-      storage.setCategories(newCategories)
-      return { categories: newCategories }
-    })
   },
 
-  updateCategory: (id, updates) => {
-    set((state) => {
-      const newCategories = state.categories.map((category) =>
-        category.id === id
-          ? { ...category, ...updates, updatedAt: new Date() }
-          : category
-      )
-      storage.setCategories(newCategories)
-      return { categories: newCategories }
-    })
+  addCategory: async (categoryData) => {
+    try {
+      const category = await createCategory(categoryData)
+      set((state) => ({
+        categories: [...state.categories, category]
+      }))
+    } catch (error) {
+      console.error('Failed to add category:', error)
+      set({ error: '카테고리 추가에 실패했습니다.' })
+    }
   },
 
-  deleteCategory: (id) => {
-    set((state) => {
-      // 카테고리 삭제 시 해당 카테고리의 북마크들도 함께 삭제
-      const newCategories = state.categories.filter((category) => category.id !== id)
-      const newBookmarks = state.bookmarks.filter((bookmark) => bookmark.categoryId !== id)
-
-      storage.setCategories(newCategories)
-      storage.setBookmarks(newBookmarks)
-
-      return { categories: newCategories, bookmarks: newBookmarks }
-    })
+  updateCategory: async (id, updates) => {
+    try {
+      const updatedCategory = await dbUpdateCategory(id, updates)
+      set((state) => ({
+        categories: state.categories.map((category) =>
+          category.id === id ? updatedCategory : category
+        )
+      }))
+    } catch (error) {
+      console.error('Failed to update category:', error)
+      set({ error: '카테고리 수정에 실패했습니다.' })
+    }
   },
 
-  duplicateCategory: (id) => {
-    set((state) => {
-      const originalCategory = state.categories.find((category) => category.id === id)
-      if (!originalCategory) return state
+  deleteCategory: async (id) => {
+    try {
+      await dbDeleteCategory(id)
+      set((state) => ({
+        categories: state.categories.filter((category) => category.id !== id),
+        bookmarks: state.bookmarks.filter((bookmark) => bookmark.categoryId !== id)
+      }))
+    } catch (error) {
+      console.error('Failed to delete category:', error)
+      set({ error: '카테고리 삭제에 실패했습니다.' })
+    }
+  },
 
-      const now = new Date()
-      const duplicatedCategoryId = crypto.randomUUID()
+  duplicateCategory: async (id) => {
+    try {
+      const { categories, bookmarks } = get()
+      const originalCategory = categories.find((category) => category.id === id)
+      if (!originalCategory) return
 
       // 카테고리 복제
-      const duplicatedCategory: Category = {
-        id: duplicatedCategoryId,
+      const duplicatedCategory = await createCategory({
         name: `${originalCategory.name} (복사본)`,
-        order: state.categories.length, // 마지막 순서로 추가
-        createdAt: now,
-        updatedAt: now,
-      }
+        order: categories.length,
+        color: originalCategory.color,
+      })
 
       // 해당 카테고리의 북마크들도 복제
-      const originalBookmarks = state.bookmarks.filter((bookmark) => bookmark.categoryId === id)
-      const duplicatedBookmarks = originalBookmarks.map((bookmark) => ({
-        ...bookmark,
-        id: crypto.randomUUID(),
-        categoryId: duplicatedCategoryId,
-        createdAt: now,
-        updatedAt: now,
+      const originalBookmarks = bookmarks.filter((bookmark) => bookmark.categoryId === id)
+      const duplicatedBookmarks = await Promise.all(
+        originalBookmarks.map(async (bookmark) => {
+          const { id: _, createdAt, updatedAt, ...bookmarkData } = bookmark
+          return await createBookmark({
+            ...bookmarkData,
+            categoryId: duplicatedCategory.id,
+          })
+        })
+      )
+
+      set((state) => ({
+        categories: [...state.categories, duplicatedCategory],
+        bookmarks: [...state.bookmarks, ...duplicatedBookmarks]
       }))
-
-      const newCategories = [...state.categories, duplicatedCategory]
-      const newBookmarks = [...state.bookmarks, ...duplicatedBookmarks]
-
-      storage.setCategories(newCategories)
-      storage.setBookmarks(newBookmarks)
-
-      return { categories: newCategories, bookmarks: newBookmarks }
-    })
+    } catch (error) {
+      console.error('Failed to duplicate category:', error)
+      set({ error: '카테고리 복제에 실패했습니다.' })
+    }
   },
 
-  moveCategoryOrder: (id, newOrder) => {
-    set((state) => {
-      const category = state.categories.find(c => c.id === id)
-      if (!category) return state
+  moveCategoryOrder: async (id, newOrder) => {
+    try {
+      const { categories } = get()
+      const category = categories.find(c => c.id === id)
+      if (!category) return
 
-      const sortedCategories = state.categories.sort((a, b) => a.order - b.order)
+      const sortedCategories = categories.sort((a, b) => a.order - b.order)
       const currentIndex = sortedCategories.findIndex(c => c.id === id)
       const targetIndex = Math.min(Math.max(newOrder, 0), sortedCategories.length - 1)
 
-      if (currentIndex === targetIndex) return state
+      if (currentIndex === targetIndex) return
 
       // 순서 재정렬
       const reorderedCategories = [...sortedCategories]
       const [movedCategory] = reorderedCategories.splice(currentIndex, 1)
       reorderedCategories.splice(targetIndex, 0, movedCategory)
 
-      // 새로운 순서 적용
-      const updatedCategories = reorderedCategories.map((cat, index) => ({
-        ...cat,
-        order: index,
-        updatedAt: new Date()
+      // 모든 카테고리의 순서를 업데이트
+      const updates = reorderedCategories.map((cat, index) => ({
+        id: cat.id,
+        updates: { order: index }
       }))
 
-      storage.setCategories(updatedCategories)
-      return { categories: updatedCategories }
-    })
+      await Promise.all(updates.map(({ id, updates }) => dbUpdateCategory(id, updates)))
+
+      // 상태 업데이트
+      set((state) => ({
+        categories: state.categories.map((cat) => {
+          const update = updates.find(u => u.id === cat.id)
+          return update ? { ...cat, order: update.updates.order! } : cat
+        })
+      }))
+    } catch (error) {
+      console.error('Failed to move category:', error)
+      set({ error: '카테고리 순서 변경에 실패했습니다.' })
+    }
   },
 
-  loadData: () => {
+  loadData: async () => {
     set({ isLoading: true, error: null })
     try {
-      const bookmarks = storage.getBookmarks()
-      const categories = storage.getCategories()
+      const [bookmarks, categories] = await Promise.all([
+        getBookmarks(),
+        getCategories()
+      ])
 
       // 기본 카테고리가 없으면 생성
+      let finalCategories = categories
       if (categories.length === 0) {
-        const defaultCategory: Category = {
-          id: crypto.randomUUID(),
+        const defaultCategory = await createCategory({
           name: '기본',
           order: 0,
-          createdAt: new Date(),
-          updatedAt: new Date(),
-        }
-        storage.setCategories([defaultCategory])
-        set({ categories: [defaultCategory] })
-      } else {
-        set({ categories })
+        })
+        finalCategories = [defaultCategory]
       }
 
-      set({ bookmarks, isLoading: false })
+      set({
+        bookmarks,
+        categories: finalCategories,
+        isLoading: false
+      })
     } catch (error) {
+      console.error('Failed to load data:', error)
       set({ error: '데이터 로딩 중 오류가 발생했습니다.', isLoading: false })
     }
   },
 
-  importBookmarks: (bookmarks, categories = []) => {
-    set((state) => {
-      const allCategories = [...state.categories, ...categories]
-      const allBookmarks = [...state.bookmarks, ...bookmarks]
+  importBookmarks: async (bookmarks, categories = []) => {
+    try {
+      set({ isLoading: true })
 
-      storage.setCategories(allCategories)
-      storage.setBookmarks(allBookmarks)
+      // 카테고리 먼저 생성
+      const createdCategories = await Promise.all(
+        categories.map(async (category) => {
+          const { id: _, createdAt, updatedAt, ...categoryData } = category
+          return await createCategory(categoryData)
+        })
+      )
 
-      return { categories: allCategories, bookmarks: allBookmarks }
-    })
+      // 북마크 생성
+      const createdBookmarks = await Promise.all(
+        bookmarks.map(async (bookmark) => {
+          const { id: _, createdAt, updatedAt, ...bookmarkData } = bookmark
+          return await createBookmark(bookmarkData)
+        })
+      )
+
+      set((state) => ({
+        categories: [...state.categories, ...createdCategories],
+        bookmarks: [...state.bookmarks, ...createdBookmarks],
+        isLoading: false
+      }))
+    } catch (error) {
+      console.error('Failed to import bookmarks:', error)
+      set({ error: '북마크 가져오기에 실패했습니다.', isLoading: false })
+    }
+  },
+
+  migrateFromLocalStorage: async () => {
+    try {
+      set({ isLoading: true })
+
+      // LocalStorage에서 데이터 읽기
+      const localBookmarks = storage.getBookmarks()
+      const localCategories = storage.getCategories()
+
+      if (localBookmarks.length === 0 && localCategories.length === 0) {
+        set({ isLoading: false })
+        return
+      }
+
+      // 카테고리 먼저 마이그레이션
+      const categoryIdMap: Record<string, string> = {}
+      const createdCategories = await Promise.all(
+        localCategories.map(async (category) => {
+          const { id: oldId, createdAt, updatedAt, ...categoryData } = category
+          const newCategory = await createCategory(categoryData)
+          categoryIdMap[oldId] = newCategory.id
+          return newCategory
+        })
+      )
+
+      // 북마크 마이그레이션 (카테고리 ID 매핑)
+      const createdBookmarks = await Promise.all(
+        localBookmarks.map(async (bookmark) => {
+          const { id: _, createdAt, updatedAt, categoryId: oldCategoryId, ...bookmarkData } = bookmark
+          const newCategoryId = categoryIdMap[oldCategoryId] || oldCategoryId
+          return await createBookmark({
+            ...bookmarkData,
+            categoryId: newCategoryId,
+          })
+        })
+      )
+
+      set({
+        categories: createdCategories,
+        bookmarks: createdBookmarks,
+        isLoading: false
+      })
+
+      // LocalStorage 클리어 (선택사항)
+      // storage.clearAll()
+    } catch (error) {
+      console.error('Failed to migrate from localStorage:', error)
+      set({ error: '로컬 데이터 마이그레이션에 실패했습니다.', isLoading: false })
+    }
+  },
+
+  migrateFavicons: async () => {
+    try {
+      const { bookmarks } = get()
+      const bookmarksToUpdate: Array<{ id: string; favicon: string | undefined }> = []
+
+      // 기존 favicon URL을 가진 북마크들을 캐시 시스템으로 마이그레이션
+      for (const bookmark of bookmarks) {
+        if (bookmark.favicon && bookmark.favicon.startsWith('http')) {
+          try {
+            // 기존 URL 방식의 favicon을 캐시 시스템으로 변환
+            const cachedFavicon = await loadFaviconWithCache(bookmark.url)
+            bookmarksToUpdate.push({
+              id: bookmark.id,
+              favicon: cachedFavicon || undefined
+            })
+          } catch {
+            // 실패한 경우 undefined로 설정
+            bookmarksToUpdate.push({
+              id: bookmark.id,
+              favicon: undefined
+            })
+          }
+        }
+      }
+
+      // 업데이트가 필요한 북마크들을 일괄 업데이트
+      if (bookmarksToUpdate.length > 0) {
+        const updates = bookmarksToUpdate.map(({ id, favicon }) => ({
+          id,
+          updates: { favicon }
+        }))
+
+        await updateMultipleBookmarks(updates)
+
+        set((state) => ({
+          bookmarks: state.bookmarks.map((bookmark) => {
+            const update = bookmarksToUpdate.find(u => u.id === bookmark.id)
+            return update ? { ...bookmark, favicon: update.favicon } : bookmark
+          })
+        }))
+      }
+    } catch (error) {
+      console.error('Failed to migrate favicons:', error)
+    }
   },
 
   getBookmarksByCategory: (categoryId) => {
@@ -288,46 +431,5 @@ export const useBookmarkStore = create<BookmarkStore>((set, get) => ({
   getBookmarkById: (id) => {
     const { bookmarks } = get()
     return bookmarks.find((bookmark) => bookmark.id === id)
-  },
-
-  migrateFavicons: async () => {
-    const { bookmarks } = get()
-    const bookmarksToUpdate: Array<{ id: string; favicon: string | null }> = []
-
-    // 기존 favicon URL을 가진 북마크들을 캐시 시스템으로 마이그레이션
-    for (const bookmark of bookmarks) {
-      if (bookmark.favicon && bookmark.favicon.startsWith('http')) {
-        try {
-          // 기존 URL 방식의 favicon을 캐시 시스템으로 변환
-          const cachedFavicon = await loadFaviconWithCache(bookmark.url)
-          bookmarksToUpdate.push({
-            id: bookmark.id,
-            favicon: cachedFavicon
-          })
-        } catch {
-          // 실패한 경우 null로 설정
-          bookmarksToUpdate.push({
-            id: bookmark.id,
-            favicon: null
-          })
-        }
-      }
-    }
-
-    // 업데이트가 필요한 북마크들을 일괄 업데이트
-    if (bookmarksToUpdate.length > 0) {
-      set((state) => {
-        const newBookmarks = state.bookmarks.map((bookmark) => {
-          const update = bookmarksToUpdate.find(u => u.id === bookmark.id)
-          if (update) {
-            return { ...bookmark, favicon: update.favicon || undefined, updatedAt: new Date() }
-          }
-          return bookmark
-        })
-
-        storage.setBookmarks(newBookmarks)
-        return { bookmarks: newBookmarks }
-      })
-    }
   },
 }))

@@ -15,7 +15,7 @@ import { Checkbox } from '@/components/ui/checkbox'
 import { ExportData } from '@/components/ExportData'
 import { ImportData } from '@/components/ImportData'
 import { ImportBookmarks } from '@/components/ImportBookmarks'
-import { Settings, Columns, Grid3X3, LayoutGrid, Trash2, GripVertical } from 'lucide-react'
+import { Settings, Columns, Grid3X3, LayoutGrid, Trash2, GripVertical, Database, Upload } from 'lucide-react'
 import { clearFailedDomains, getCacheStats } from '@/lib/faviconCache'
 
 interface SortableCategoryItemProps {
@@ -72,7 +72,7 @@ function SortableCategoryItem({ category, isHidden, onToggleVisibility }: Sortab
 
 export function SettingsPanel() {
   const { settings, updateSettings, toggleCategoryVisibility } = useSettingsStore()
-  const { categories, moveCategoryOrder } = useBookmarkStore()
+  const { categories, moveCategoryOrder, migrateFromLocalStorage, isLoading } = useBookmarkStore()
 
   const handleLayoutChange = (value: string) => {
     updateSettings({ layoutColumns: parseInt(value) as 1 | 2 | 3 })
@@ -109,6 +109,17 @@ export function SettingsPanel() {
   const handleClearFailedDomains = () => {
     clearFailedDomains()
     alert('실패한 도메인 목록이 초기화되었습니다. 이제 모든 사이트의 favicon을 다시 시도할 수 있습니다.')
+  }
+
+  const handleMigrateData = async () => {
+    if (confirm('LocalStorage의 데이터를 Supabase로 마이그레이션하시겠습니까? 이 작업은 되돌릴 수 없습니다.')) {
+      try {
+        await migrateFromLocalStorage()
+        alert('데이터 마이그레이션이 완료되었습니다!')
+      } catch (error) {
+        alert('마이그레이션 중 오류가 발생했습니다.')
+      }
+    }
   }
 
   const cacheStats = getCacheStats()
@@ -254,6 +265,28 @@ export function SettingsPanel() {
               <ImportData variant="outline" size="sm" />
               <ImportBookmarks variant="outline" size="sm" />
             </div>
+          </div>
+
+          <div className="space-y-3">
+            <Label className="text-base font-medium">데이터 마이그레이션</Label>
+            <p className="text-sm text-muted-foreground">
+              LocalStorage의 기존 데이터를 Supabase 클라우드 데이터베이스로 이동할 수 있습니다
+            </p>
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={handleMigrateData}
+              disabled={isLoading}
+              className="w-full"
+            >
+              <Database className="h-4 w-4 mr-2" />
+              {isLoading ? '마이그레이션 중...' : 'Supabase로 데이터 마이그레이션'}
+            </Button>
+            <p className="text-xs text-muted-foreground">
+              • 이 작업은 한 번만 실행하면 됩니다<br />
+              • 기존 LocalStorage 데이터는 유지됩니다<br />
+              • 마이그레이션 후 모든 데이터는 클라우드에 저장됩니다
+            </p>
           </div>
 
           <div className="space-y-3">
