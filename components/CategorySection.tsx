@@ -13,6 +13,7 @@ import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigge
 import { Plus, Edit2, Trash2, MoreVertical, RefreshCw } from 'lucide-react'
 import { DraggableBookmarkCard } from './DraggableBookmarkCard'
 import { forceRefreshFavicon } from '@/lib/faviconCache'
+import { AddBookmark } from './AddBookmark' // ✅ 이 라인을 추가하세요.
 
 interface CategorySectionProps {
   category: Category
@@ -109,6 +110,12 @@ export function CategorySection({ category }: CategorySectionProps) {
                 >
                   <RefreshCw className={`h-4 w-4 ${isRefreshing ? 'animate-spin' : ''}`} />
                 </Button>
+                {/* ✅ 여기에 새 북마크 추가 아이콘 버튼을 추가합니다. */}
+                <AddBookmark defaultCategoryId={category.id}>
+                  <Button variant="ghost" size="sm" title="이 카테고리에 새 북마크 추가">
+                    <Plus className="h-4 w-4" />
+                  </Button>
+                </AddBookmark>
                 <DropdownMenu>
                   <DropdownMenuTrigger asChild>
                     <Button variant="ghost" size="sm">

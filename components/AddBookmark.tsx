@@ -12,9 +12,11 @@ import { loadFaviconWithCache } from '@/lib/faviconCache'
 
 interface AddBookmarkProps {
   defaultCategoryId?: string
+  children?: React.ReactNode // ✅ children prop 추가
 }
 
-export function AddBookmark({ defaultCategoryId }: AddBookmarkProps) {
+//export function AddBookmark({ defaultCategoryId }: AddBookmarkProps) {
+export function AddBookmark({ defaultCategoryId, children }: AddBookmarkProps) {
   const { addBookmark, categories, getBookmarksByCategory } = useBookmarkStore()
   const [isOpen, setIsOpen] = useState(false)
   const [selectedCategoryId, setSelectedCategoryId] = useState(defaultCategoryId || categories[0]?.id || '')
@@ -61,17 +63,48 @@ export function AddBookmark({ defaultCategoryId }: AddBookmarkProps) {
 
   return (
     <Dialog open={isOpen} onOpenChange={setIsOpen}>
-      <DialogTrigger asChild>
+        <DialogTrigger asChild>
+        {/* ✅ children이 있으면 사용하고, 없으면 기본 버튼을 렌더링 */}
+        {children || (
+          <Button>
+            <Plus className="h-4 w-4 mr-2" />
+            새 북마크
+          </Button>
+        )}
+      </DialogTrigger>
+      {/* <DialogTrigger asChild>
         <Button>
           <Plus className="h-4 w-4 mr-2" />
           새 북마크
         </Button>
-      </DialogTrigger>
+      </DialogTrigger> */}
       <DialogContent>
         <DialogHeader>
           <DialogTitle>새 북마크 추가</DialogTitle>
         </DialogHeader>
         <form onSubmit={handleSubmit} className="space-y-4">
+          
+          <div>
+            <label className="text-sm font-medium">카테고리</label>
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <Button variant="outline" className="w-full justify-between">
+                  {selectedCategory?.name || '카테고리 선택'}
+                  <ChevronDown className="h-4 w-4" />
+                </Button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent className="w-full">
+                {categories.map((category) => (
+                  <DropdownMenuItem
+                    key={category.id}
+                    onClick={() => setSelectedCategoryId(category.id)}
+                  >
+                    {category.name}
+                  </DropdownMenuItem>
+                ))}
+              </DropdownMenuContent>
+            </DropdownMenu>
+          </div>
           <div>
             <label htmlFor="bookmark-name" className="text-sm font-medium">
               이름
@@ -111,27 +144,6 @@ export function AddBookmark({ defaultCategoryId }: AddBookmarkProps) {
             />
           </div>
 
-          <div>
-            <label className="text-sm font-medium">카테고리</label>
-            <DropdownMenu>
-              <DropdownMenuTrigger asChild>
-                <Button variant="outline" className="w-full justify-between">
-                  {selectedCategory?.name || '카테고리 선택'}
-                  <ChevronDown className="h-4 w-4" />
-                </Button>
-              </DropdownMenuTrigger>
-              <DropdownMenuContent className="w-full">
-                {categories.map((category) => (
-                  <DropdownMenuItem
-                    key={category.id}
-                    onClick={() => setSelectedCategoryId(category.id)}
-                  >
-                    {category.name}
-                  </DropdownMenuItem>
-                ))}
-              </DropdownMenuContent>
-            </DropdownMenu>
-          </div>
 
           <div className="flex justify-end gap-2">
             <Button
