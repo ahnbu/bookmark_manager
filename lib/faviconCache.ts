@@ -15,6 +15,16 @@ const RETRY_COOLDOWN = 60 * 60 * 1000 // 1시간
 const MAX_FAVICON_SIZE = 10 * 1024 // 10KB
 const MAX_TOTAL_CACHE_SIZE = 2 * 1024 * 1024 // 2MB
 
+// Blob을 Base64 데이터 URL로 변환하는 헬퍼 함수
+async function blobToBase64(blob: Blob): Promise<string> {
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader();
+    reader.onloadend = () => resolve(reader.result as string);
+    reader.onerror = reject;
+    reader.readAsDataURL(blob);
+  });
+}
+
 // Local Storage에서 캐시 불러오기
 function getFaviconCache(): FaviconCache {
   try {
@@ -180,40 +190,55 @@ export function saveFaviconToCache(domain: string, base64Data: string): void {
   saveFaviconCache(cache)
 }
 
-// favicon 로딩 (캐시 우선, 없으면 네트워크 요청)
+// favicon 로딩 (캐시 우선, 없으면 CORS 프록시를 통해 Google API 요청)
 export async function loadFaviconWithCache(url: string): Promise<string | null> {
   try {
-    const urlObj = new URL(url)
-    const domain = urlObj.hostname
-    const faviconUrl = `${urlObj.protocol}//${domain}/favicon.ico`
+    const urlObj = new URL(url);
+    const domain = urlObj.hostname;
 
-    // 캐시에서 확인
-    const cached = getFaviconFromCache(domain)
+    // 1. 캐시에서 확인 (기존 로직 재사용)
+    const cached = getFaviconFromCache(domain);
     if (cached) {
-      return cached
+      return cached;
     }
 
-    // 실패한 도메인인지 확인
-    const failedDomains = getFailedDomains()
+    // 2. 실패한 도메인인지 확인 (기존 로직 재사용)
+    const failedDomains = getFailedDomains();
     if (failedDomains[domain] && failedDomains[domain] > Date.now() - RETRY_COOLDOWN) {
-      return null
+      return null;
     }
 
-    // 네트워크에서 로딩 시도
+    // 3. 네트워크에서 로딩 시도 (CORS 프록시 사용으로 변경)
     try {
-      const base64 = await imageToBase64(faviconUrl)
-      saveFaviconToCache(domain, base64)
-      return base64
-    } catch (error) {
-      // 실패한 도메인으로 기록
-      const failed = getFailedDomains()
-      failed[domain] = Date.now()
-      saveFailedDomains(failed)
+      const googleApiUrl = `https://www.google.com/s2/favicons?sz=64&domain=${domain}`;
+      // allorigins 프록시를 통해 요청합니다. 대상 URL은 반드시 인코딩해야 합니다.
+      const proxiedUrl = `https://favicon-proxy.byungwook-an.workers.dev/?url=${encodeURIComponent(googleApiUrl)}`;
+      
+      const response = await fetch(proxiedUrl); // 이제 CORS 에러가 발생하지 않습니다.
+      if (!response.ok) {
+        throw new Error('Proxied Google API failed');
+      }
 
-      return null
+      const blob = await response.blob();
+      const base64 = await blobToBase64(blob);
+
+      if (base64.length > MAX_FAVICON_SIZE * 1.5) {
+        throw new Error('Favicon too large');
+      }
+
+      saveFaviconToCache(domain, base64);
+      return base64;
+
+    } catch (error) {
+      const failed = getFailedDomains();
+      failed[domain] = Date.now();
+      saveFailedDomains(failed);
+      
+      console.error(`Failed to load favicon for ${domain}:`, error);
+      return null;
     }
   } catch {
-    return null
+    return null;
   }
 }
 
@@ -227,32 +252,43 @@ export function getFaviconUrl(url: string): string {
   }
 }
 
-// 강제 새로고침 (실패 기록 무시하고 재시도)
+// 강제 새로고침 (실패 기록 무시하고 프록시를 통해 재시도)
 export async function forceRefreshFavicon(url: string): Promise<string | null> {
   try {
-    const urlObj = new URL(url)
-    const domain = urlObj.hostname
-    const faviconUrl = `${urlObj.protocol}//${domain}/favicon.ico`
-
-    // 실패 기록 무시하고 강제로 시도
+    const urlObj = new URL(url);
+    const domain = urlObj.hostname;
+    
     try {
-      const base64 = await imageToBase64(faviconUrl)
-      saveFaviconToCache(domain, base64)
-
-      // 성공 시 실패 기록에서 제거
-      const failedDomains = getFailedDomains()
-      if (failedDomains[domain]) {
-        delete failedDomains[domain]
-        saveFailedDomains(failedDomains)
+      const googleApiUrl = `https://www.google.com/s2/favicons?sz=64&domain=${domain}`;
+      const proxiedUrl = `https://favicon-proxy.byungwook-an.workers.dev/?url=${encodeURIComponent(googleApiUrl)}`;
+      
+      const response = await fetch(proxiedUrl);
+      if (!response.ok) {
+        throw new Error('Proxied Google API failed');
       }
 
-      return base64
+      const blob = await response.blob();
+      const base64 = await blobToBase64(blob);
+
+      if (base64.length > MAX_FAVICON_SIZE * 1.5) {
+        throw new Error('Favicon too large');
+      }
+
+      saveFaviconToCache(domain, base64);
+
+      const failedDomains = getFailedDomains();
+      if (failedDomains[domain]) {
+        delete failedDomains[domain];
+        saveFailedDomains(failedDomains);
+      }
+
+      return base64;
     } catch (error) {
-      // 실패해도 실패 기록은 업데이트하지 않음 (기존 favicon 보존 목적)
-      return null
+      console.error(`Failed to force refresh favicon for ${domain}:`, error);
+      return null;
     }
   } catch {
-    return null
+    return null;
   }
 }
 

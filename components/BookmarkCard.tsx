@@ -18,8 +18,10 @@ interface BookmarkCardProps {
 }
 
 export function BookmarkCard({ bookmark, onModalStateChange }: BookmarkCardProps) {
-  const { updateBookmark, deleteBookmark } = useBookmarkStore()
+  const { updateBookmark, deleteBookmark, getBookmarkById } = useBookmarkStore()
 
+  // 항상 최신 북마크 데이터 사용
+  const currentBookmark = getBookmarkById(bookmark.id) || bookmark
   const [isEditing, setIsEditing] = useState(false)
   const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false)
 
@@ -28,18 +30,27 @@ export function BookmarkCard({ bookmark, onModalStateChange }: BookmarkCardProps
     const isAnyModalOpen = isEditing || isDeleteDialogOpen
     onModalStateChange?.(isAnyModalOpen)
   }, [isEditing, isDeleteDialogOpen, onModalStateChange])
-  const [currentFavicon, setCurrentFavicon] = useState<string | null>(bookmark.favicon || null)
+  const [currentFavicon, setCurrentFavicon] = useState<string | null>(currentBookmark.favicon || null)
   const [editData, setEditData] = useState({
-    name: bookmark.name,
-    url: bookmark.url,
-    description: bookmark.description || '',
+    name: currentBookmark.name,
+    url: currentBookmark.url,
+    description: currentBookmark.description || '',
   })
+
+  // currentBookmark이 변경될 때마다 editData 업데이트
+  useEffect(() => {
+    setEditData({
+      name: currentBookmark.name,
+      url: currentBookmark.url,
+      description: currentBookmark.description || '',
+    })
+  }, [currentBookmark.name, currentBookmark.url, currentBookmark.description])
 
   // 컴포넌트 마운트 시 캐시에서 favicon 확인 및 로딩
   useEffect(() => {
     const loadFavicon = async () => {
       try {
-        const urlObj = new URL(bookmark.url)
+        const urlObj = new URL(currentBookmark.url)
         const domain = urlObj.hostname
 
         // 먼저 캐시에서 확인
@@ -50,7 +61,7 @@ export function BookmarkCard({ bookmark, onModalStateChange }: BookmarkCardProps
         }
 
         // 캐시에 없으면 로딩 시도
-        const loadedFavicon = await loadFaviconWithCache(bookmark.url)
+        const loadedFavicon = await loadFaviconWithCache(currentBookmark.url)
         if (loadedFavicon) {
           setCurrentFavicon(loadedFavicon)
         }
@@ -60,35 +71,57 @@ export function BookmarkCard({ bookmark, onModalStateChange }: BookmarkCardProps
     }
 
     loadFavicon()
-  }, [bookmark.url])
+  }, [currentBookmark.url])
 
-  const handleSaveEdit = () => {
+  const handleSaveEdit = async () => {
     if (editData.name.trim() && editData.url.trim()) {
-      updateBookmark(bookmark.id, {
+      const urlChanged = editData.url.trim() !== currentBookmark.url
+
+      updateBookmark(currentBookmark.id, {
         name: editData.name.trim(),
         url: editData.url.trim(),
         description: editData.description.trim() || undefined,
       })
+
+      // URL이 변경된 경우 새로운 favicon 로딩
+      if (urlChanged) {
+        setCurrentFavicon(null) // 즉시 favicon 리셋
+        try {
+          const newFavicon = await loadFaviconWithCache(editData.url.trim())
+          if (newFavicon) {
+            setCurrentFavicon(newFavicon)
+            // 북마크 데이터에도 favicon 업데이트
+            updateBookmark(currentBookmark.id, { favicon: newFavicon })
+          }
+        } catch {
+          // favicon 로딩 실패 시 무시
+        }
+      }
+
       setIsEditing(false)
     }
   }
 
   const handleCancelEdit = () => {
     setEditData({
-      name: bookmark.name,
-      url: bookmark.url,
-      description: bookmark.description || '',
+      name: currentBookmark.name,
+      url: currentBookmark.url,
+      description: currentBookmark.description || '',
     })
     setIsEditing(false)
   }
 
   const handleDelete = () => {
-    deleteBookmark(bookmark.id)
+    deleteBookmark(currentBookmark.id)
     setIsDeleteDialogOpen(false)
   }
 
   const handleOpenUrl = () => {
-    window.open(bookmark.url, '_blank', 'noopener,noreferrer')
+
+    // 편집 중인 경우 편집 중인 URL을, 아니면 원본 URL을 사용
+    const urlToOpen = isEditing ? editData.url : currentBookmark.url
+
+    window.open(urlToOpen, '_blank', 'noopener,noreferrer')
   }
 
   return (
@@ -115,20 +148,21 @@ export function BookmarkCard({ bookmark, onModalStateChange }: BookmarkCardProps
               <div className="flex items-start justify-between gap-2">
                 <div className="flex-1 min-w-0">
                   <h4 className="font-medium text-sm truncate group-hover:text-primary">
-                    {bookmark.name}
+                    {currentBookmark.name}
                   </h4>
-                  {bookmark.description && (
+                  {currentBookmark.description && (
                     <p className="text-xs text-muted-foreground mt-1 line-clamp-2">
-                      {bookmark.description}
+                      {currentBookmark.description}
                     </p>
                   )}
                   <p className="text-xs text-muted-foreground mt-1 truncate">
-                    {bookmark.url}
+                    {currentBookmark.url}
                   </p>
                 </div>
 
                 {/* Actions */}
                 <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+                  {/* URL 수정해도 문제가 생겼던 과거 코드
                   <Button
                     size="sm"
                     variant="ghost"
@@ -137,6 +171,14 @@ export function BookmarkCard({ bookmark, onModalStateChange }: BookmarkCardProps
                       e.stopPropagation()
                       handleOpenUrl()
                     }}
+                  >
+                    <ExternalLink className="h-3 w-3" />
+                  </Button>
+                   */}
+                  <Button
+                    size="sm"
+                    variant="ghost"
+                    className="h-6 w-6 p-0"
                   >
                     <ExternalLink className="h-3 w-3" />
                   </Button>
@@ -242,7 +284,7 @@ export function BookmarkCard({ bookmark, onModalStateChange }: BookmarkCardProps
           </DialogHeader>
           <div className="space-y-4">
             <p>
-              &ldquo;{bookmark.name}&rdquo; 북마크를 삭제하시겠습니까?
+              &ldquo;{currentBookmark.name}&rdquo; 북마크를 삭제하시겠습니까?
             </p>
             <p className="text-sm text-muted-foreground">
               이 작업은 되돌릴 수 없습니다.
