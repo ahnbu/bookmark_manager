@@ -7,7 +7,6 @@ import { DragDropProvider } from '@/components/DragDropProvider'
 import { CategoryList } from '@/components/CategoryList'
 import { AddCategory } from '@/components/AddCategory'
 import { AddBookmark } from '@/components/AddBookmark'
-import { ImportBookmarks } from '@/components/ImportBookmarks'
 import { SettingsPanel } from '@/components/SettingsPanel'
 import { Toaster } from '@/components/ui/toaster'
 import { Bookmark } from 'lucide-react'
@@ -74,7 +73,6 @@ export default function Home() {
             </div>
 
             <div className="flex items-center gap-2">
-              <ImportBookmarks />
               <SettingsPanel />
             </div>
           </div>
@@ -97,7 +95,6 @@ export default function Home() {
                 </p>
                 <div className="flex flex-col sm:flex-row gap-2 justify-center">
                   <AddCategory />
-                  <ImportBookmarks />
                 </div>
               </div>
             </div>

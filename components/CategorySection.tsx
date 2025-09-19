@@ -10,7 +10,7 @@ import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog'
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '@/components/ui/dropdown-menu'
-import { Plus, Edit2, Trash2, MoreVertical, RefreshCw } from 'lucide-react'
+import { Plus, Edit2, Trash2, MoreVertical, RefreshCw, Copy } from 'lucide-react'
 import { DraggableBookmarkCard } from './DraggableBookmarkCard'
 import { forceRefreshFavicon } from '@/lib/faviconCache'
 import { AddBookmark } from './AddBookmark' // ✅ 이 라인을 추가하세요.
@@ -20,7 +20,7 @@ interface CategorySectionProps {
 }
 
 export function CategorySection({ category }: CategorySectionProps) {
-  const { getBookmarksByCategory, updateCategory, deleteCategory } = useBookmarkStore()
+  const { getBookmarksByCategory, updateCategory, deleteCategory, duplicateCategory } = useBookmarkStore()
   const bookmarks = getBookmarksByCategory(category.id)
 
   const [isEditing, setIsEditing] = useState(false)
@@ -50,6 +50,10 @@ export function CategorySection({ category }: CategorySectionProps) {
   const handleDelete = () => {
     deleteCategory(category.id)
     setIsDeleteDialogOpen(false)
+  }
+
+  const handleDuplicate = () => {
+    duplicateCategory(category.id)
   }
 
   const handleRefreshFavicons = async () => {
@@ -127,6 +131,10 @@ export function CategorySection({ category }: CategorySectionProps) {
                     <Edit2 className="h-4 w-4 mr-2" />
                     이름 수정
                   </DropdownMenuItem>
+                    <DropdownMenuItem onClick={handleDuplicate}>
+                      <Copy className="h-4 w-4 mr-2" />
+                      카테고리 복제
+                    </DropdownMenuItem>
                     <DropdownMenuItem
                       onClick={() => setIsDeleteDialogOpen(true)}
                       className="text-destructive"

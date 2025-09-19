@@ -19,6 +19,7 @@ interface BookmarkStore {
   addCategory: (category: Omit<Category, 'id' | 'createdAt' | 'updatedAt'>) => void
   updateCategory: (id: string, updates: Partial<Category>) => void
   deleteCategory: (id: string) => void
+  duplicateCategory: (id: string) => void
   moveCategoryOrder: (id: string, newOrder: number) => void
 
   // Data loading
@@ -160,6 +161,43 @@ export const useBookmarkStore = create<BookmarkStore>((set, get) => ({
       // 카테고리 삭제 시 해당 카테고리의 북마크들도 함께 삭제
       const newCategories = state.categories.filter((category) => category.id !== id)
       const newBookmarks = state.bookmarks.filter((bookmark) => bookmark.categoryId !== id)
+
+      storage.setCategories(newCategories)
+      storage.setBookmarks(newBookmarks)
+
+      return { categories: newCategories, bookmarks: newBookmarks }
+    })
+  },
+
+  duplicateCategory: (id) => {
+    set((state) => {
+      const originalCategory = state.categories.find((category) => category.id === id)
+      if (!originalCategory) return state
+
+      const now = new Date()
+      const duplicatedCategoryId = crypto.randomUUID()
+
+      // 카테고리 복제
+      const duplicatedCategory: Category = {
+        id: duplicatedCategoryId,
+        name: `${originalCategory.name} (복사본)`,
+        order: state.categories.length, // 마지막 순서로 추가
+        createdAt: now,
+        updatedAt: now,
+      }
+
+      // 해당 카테고리의 북마크들도 복제
+      const originalBookmarks = state.bookmarks.filter((bookmark) => bookmark.categoryId === id)
+      const duplicatedBookmarks = originalBookmarks.map((bookmark) => ({
+        ...bookmark,
+        id: crypto.randomUUID(),
+        categoryId: duplicatedCategoryId,
+        createdAt: now,
+        updatedAt: now,
+      }))
+
+      const newCategories = [...state.categories, duplicatedCategory]
+      const newBookmarks = [...state.bookmarks, ...duplicatedBookmarks]
 
       storage.setCategories(newCategories)
       storage.setBookmarks(newBookmarks)

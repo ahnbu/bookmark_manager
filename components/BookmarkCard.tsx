@@ -3,6 +3,7 @@
 import { useState, useEffect } from 'react'
 import { Bookmark } from '@/lib/types'
 import { useBookmarkStore } from '@/store/bookmarkStore'
+import { useSettingsStore } from '@/store/settingsStore'
 import { Card, CardContent } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
@@ -19,6 +20,7 @@ interface BookmarkCardProps {
 
 export function BookmarkCard({ bookmark, onModalStateChange }: BookmarkCardProps) {
   const { updateBookmark, deleteBookmark, getBookmarkById } = useBookmarkStore()
+  const { settings } = useSettingsStore()
 
   // 항상 최신 북마크 데이터 사용
   const currentBookmark = getBookmarkById(bookmark.id) || bookmark
@@ -150,14 +152,16 @@ export function BookmarkCard({ bookmark, onModalStateChange }: BookmarkCardProps
                   <h4 className="font-medium text-sm truncate group-hover:text-primary">
                     {currentBookmark.name}
                   </h4>
-                  {currentBookmark.description && (
+                  {currentBookmark.description && (settings.displayOptions?.showDescription ?? true) && (
                     <p className="text-xs text-muted-foreground mt-1 line-clamp-2">
                       {currentBookmark.description}
                     </p>
                   )}
-                  <p className="text-xs text-muted-foreground mt-1 truncate">
-                    {currentBookmark.url}
-                  </p>
+                  {(settings.displayOptions?.showUrl ?? true) && (
+                    <p className="text-xs text-muted-foreground mt-1 truncate">
+                      {currentBookmark.url}
+                    </p>
+                  )}
                 </div>
 
                 {/* Actions */}

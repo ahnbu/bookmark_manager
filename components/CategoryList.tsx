@@ -5,6 +5,7 @@ import { useSortable } from '@dnd-kit/sortable'
 import { CSS } from '@dnd-kit/utilities'
 import { Category } from '@/lib/types'
 import { useBookmarkStore } from '@/store/bookmarkStore'
+import { useSettingsStore } from '@/store/settingsStore'
 import { CategorySection } from './CategorySection'
 import { GripVertical } from 'lucide-react'
 
@@ -59,7 +60,12 @@ function DraggableCategory({ category }: DraggableCategoryProps) {
 }
 
 export function CategoryList({ categories, gridCols }: CategoryListProps) {
-  const sortedCategories = categories.sort((a, b) => a.order - b.order)
+  const { settings } = useSettingsStore()
+  const hiddenCategories = settings.displayOptions?.hiddenCategories || []
+
+  const sortedCategories = categories
+    .filter(category => !hiddenCategories.includes(category.id))
+    .sort((a, b) => a.order - b.order)
 
   return (
     <SortableContext

@@ -1,20 +1,37 @@
 'use client'
 
 import { useSettingsStore } from '@/store/settingsStore'
+import { useBookmarkStore } from '@/store/bookmarkStore'
 import { Button } from '@/components/ui/button'
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog'
 import { Label } from '@/components/ui/label'
 import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group'
+import { Switch } from '@/components/ui/switch'
+import { Checkbox } from '@/components/ui/checkbox'
 import { ExportData } from '@/components/ExportData'
 import { ImportData } from '@/components/ImportData'
+import { ImportBookmarks } from '@/components/ImportBookmarks'
 import { Settings, Columns, Grid3X3, LayoutGrid, Trash2 } from 'lucide-react'
 import { clearFailedDomains, getCacheStats } from '@/lib/faviconCache'
 
 export function SettingsPanel() {
-  const { settings, updateSettings } = useSettingsStore()
+  const { settings, updateSettings, toggleCategoryVisibility } = useSettingsStore()
+  const { categories } = useBookmarkStore()
 
   const handleLayoutChange = (value: string) => {
     updateSettings({ layoutColumns: parseInt(value) as 1 | 2 | 3 })
+  }
+
+  const handleDisplayOptionChange = (option: 'showUrl' | 'showDescription', value: boolean) => {
+    updateSettings({
+      displayOptions: {
+        ...settings.displayOptions,
+        showUrl: settings.displayOptions?.showUrl ?? true,
+        showDescription: settings.displayOptions?.showDescription ?? true,
+        hiddenCategories: settings.displayOptions?.hiddenCategories ?? [],
+        [option]: value,
+      },
+    })
   }
 
   const handleClearFailedDomains = () => {
@@ -87,6 +104,68 @@ export function SettingsPanel() {
           </div>
 
           <div className="space-y-3">
+            <Label className="text-base font-medium">표시 옵션</Label>
+            <p className="text-sm text-muted-foreground">
+              북마크에 표시할 정보를 선택하세요
+            </p>
+
+            <div className="space-y-4">
+              <div className="flex items-center justify-between">
+                <div className="space-y-0.5">
+                  <Label className="text-sm font-medium">URL 표시</Label>
+                  <p className="text-xs text-muted-foreground">
+                    각 북마크에 URL을 표시합니다
+                  </p>
+                </div>
+                <Switch
+                  checked={settings.displayOptions?.showUrl ?? true}
+                  onCheckedChange={(checked) => handleDisplayOptionChange('showUrl', checked)}
+                />
+              </div>
+
+              <div className="flex items-center justify-between">
+                <div className="space-y-0.5">
+                  <Label className="text-sm font-medium">메모 표시</Label>
+                  <p className="text-xs text-muted-foreground">
+                    각 북마크에 설명(메모)을 표시합니다
+                  </p>
+                </div>
+                <Switch
+                  checked={settings.displayOptions?.showDescription ?? true}
+                  onCheckedChange={(checked) => handleDisplayOptionChange('showDescription', checked)}
+                />
+              </div>
+
+              <div className="space-y-3">
+                <Label className="text-sm font-medium">카테고리 표시</Label>
+                <p className="text-xs text-muted-foreground">
+                  숨기고 싶은 카테고리를 선택하세요
+                </p>
+                <div className="space-y-2 max-h-32 overflow-y-auto">
+                  {categories.map((category) => {
+                    const isHidden = settings.displayOptions?.hiddenCategories?.includes(category.id) ?? false
+                    return (
+                      <div key={category.id} className="flex items-center space-x-2">
+                        <Checkbox
+                          id={`category-${category.id}`}
+                          checked={!isHidden}
+                          onCheckedChange={() => toggleCategoryVisibility(category.id)}
+                        />
+                        <Label
+                          htmlFor={`category-${category.id}`}
+                          className="text-sm cursor-pointer"
+                        >
+                          {category.name}
+                        </Label>
+                      </div>
+                    )
+                  })}
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <div className="space-y-3">
             <Label className="text-base font-medium">데이터 관리</Label>
             <p className="text-sm text-muted-foreground">
               북마크 데이터를 백업하거나 복원할 수 있습니다
@@ -94,6 +173,7 @@ export function SettingsPanel() {
             <div className="flex flex-col sm:flex-row gap-2">
               <ExportData variant="outline" size="sm" />
               <ImportData variant="outline" size="sm" />
+              <ImportBookmarks variant="outline" size="sm" />
             </div>
           </div>
 

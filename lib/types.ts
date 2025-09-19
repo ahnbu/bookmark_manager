@@ -22,6 +22,11 @@ export interface Category {
 export interface Settings {
   layoutColumns: 1 | 2 | 3
   theme?: 'light' | 'dark' | 'system'
+  displayOptions?: {
+    showUrl: boolean
+    showDescription: boolean
+    hiddenCategories: string[]
+  }
 }
 
 export interface BookmarkImport {

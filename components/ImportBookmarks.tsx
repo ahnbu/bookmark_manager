@@ -7,9 +7,14 @@ import { Button } from '@/components/ui/button'
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog'
 import { Input } from '@/components/ui/input'
 import { useToast } from '@/hooks/use-toast'
-import { Upload, FileText, AlertCircle } from 'lucide-react'
+import { Globe, FileText, AlertCircle } from 'lucide-react'
 
-export function ImportBookmarks() {
+interface ImportBookmarksProps {
+  variant?: 'default' | 'outline'
+  size?: 'default' | 'sm' | 'lg'
+}
+
+export function ImportBookmarks({ variant = 'outline', size = 'default' }: ImportBookmarksProps) {
   const { importBookmarks } = useBookmarkStore()
   const { toast } = useToast()
   const [isOpen, setIsOpen] = useState(false)
@@ -82,8 +87,8 @@ export function ImportBookmarks() {
   return (
     <Dialog open={isOpen} onOpenChange={setIsOpen}>
       <DialogTrigger asChild>
-        <Button variant="outline">
-          <Upload className="h-4 w-4 mr-2" />
+        <Button variant={variant} size={size}>
+          <Globe className="h-4 w-4 mr-2" />
           북마크 가져오기
         </Button>
       </DialogTrigger>
