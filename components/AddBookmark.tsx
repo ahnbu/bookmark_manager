@@ -8,6 +8,7 @@ import { Textarea } from '@/components/ui/textarea'
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog'
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '@/components/ui/dropdown-menu'
 import { Plus, ChevronDown } from 'lucide-react'
+import { loadFaviconWithCache } from '@/lib/faviconCache'
 
 interface AddBookmarkProps {
   defaultCategoryId?: string
@@ -25,18 +26,31 @@ export function AddBookmark({ defaultCategoryId }: AddBookmarkProps) {
 
   const selectedCategory = categories.find(cat => cat.id === selectedCategoryId)
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
     if (formData.name.trim() && formData.url.trim() && selectedCategoryId) {
       const categoryBookmarks = getBookmarksByCategory(selectedCategoryId)
 
-      addBookmark({
+      // 북마크 먼저 추가 (favicon 없이)
+      const newBookmark = {
         name: formData.name.trim(),
         url: formData.url.trim(),
         description: formData.description.trim() || undefined,
         categoryId: selectedCategoryId,
         order: categoryBookmarks.length,
-        favicon: getFaviconUrl(formData.url),
+        favicon: null, // 초기값은 null
+      }
+
+      addBookmark(newBookmark)
+
+      // 백그라운드에서 favicon 로딩
+      loadFaviconWithCache(formData.url).then((cachedFavicon) => {
+        if (cachedFavicon) {
+          // favicon 로딩 완료 시 업데이트 (여기서는 스토어에 업데이트 로직이 필요)
+          // 현재는 새로고침하면 적용됨
+        }
+      }).catch(() => {
+        // favicon 로딩 실패해도 무시
       })
 
       setFormData({ name: '', url: '', description: '' })
@@ -44,14 +58,6 @@ export function AddBookmark({ defaultCategoryId }: AddBookmarkProps) {
     }
   }
 
-  const getFaviconUrl = (url: string): string => {
-    try {
-      const urlObj = new URL(url)
-      return `${urlObj.protocol}//${urlObj.hostname}/favicon.ico`
-    } catch {
-      return '/default-favicon.svg'
-    }
-  }
 
   return (
     <Dialog open={isOpen} onOpenChange={setIsOpen}>

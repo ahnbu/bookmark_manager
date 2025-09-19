@@ -10,8 +10,9 @@ import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog'
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '@/components/ui/dropdown-menu'
-import { Plus, Edit2, Trash2, MoreVertical } from 'lucide-react'
+import { Plus, Edit2, Trash2, MoreVertical, RefreshCw } from 'lucide-react'
 import { DraggableBookmarkCard } from './DraggableBookmarkCard'
+import { forceRefreshFavicon } from '@/lib/faviconCache'
 
 interface CategorySectionProps {
   category: Category
@@ -24,6 +25,7 @@ export function CategorySection({ category }: CategorySectionProps) {
   const [isEditing, setIsEditing] = useState(false)
   const [editName, setEditName] = useState(category.name)
   const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false)
+  const [isRefreshing, setIsRefreshing] = useState(false)
 
   const { setNodeRef, isOver } = useDroppable({
     id: category.id,
@@ -47,6 +49,25 @@ export function CategorySection({ category }: CategorySectionProps) {
   const handleDelete = () => {
     deleteCategory(category.id)
     setIsDeleteDialogOpen(false)
+  }
+
+  const handleRefreshFavicons = async () => {
+    setIsRefreshing(true)
+    try {
+      // 카테고리 내 모든 북마크의 favicon 강제 새로고침
+      const refreshPromises = bookmarks.map(bookmark =>
+        forceRefreshFavicon(bookmark.url)
+      )
+
+      await Promise.allSettled(refreshPromises)
+
+      // 페이지 새로고침으로 UI 업데이트
+      window.location.reload()
+    } catch (error) {
+      console.error('Favicon refresh failed:', error)
+    } finally {
+      setIsRefreshing(false)
+    }
   }
 
   return (
@@ -78,26 +99,37 @@ export function CategorySection({ category }: CategorySectionProps) {
           ) : (
             <>
               <h3 className="font-semibold text-lg">{category.name}</h3>
-              <DropdownMenu>
-                <DropdownMenuTrigger asChild>
-                  <Button variant="ghost" size="sm">
-                    <MoreVertical className="h-4 w-4" />
-                  </Button>
-                </DropdownMenuTrigger>
-                <DropdownMenuContent align="end">
+              <div className="flex items-center gap-1">
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  onClick={handleRefreshFavicons}
+                  disabled={isRefreshing || bookmarks.length === 0}
+                  title="Favicon 새로고침"
+                >
+                  <RefreshCw className={`h-4 w-4 ${isRefreshing ? 'animate-spin' : ''}`} />
+                </Button>
+                <DropdownMenu>
+                  <DropdownMenuTrigger asChild>
+                    <Button variant="ghost" size="sm">
+                      <MoreVertical className="h-4 w-4" />
+                    </Button>
+                  </DropdownMenuTrigger>
+                  <DropdownMenuContent align="end">
                   <DropdownMenuItem onClick={() => setIsEditing(true)}>
                     <Edit2 className="h-4 w-4 mr-2" />
                     이름 수정
                   </DropdownMenuItem>
-                  <DropdownMenuItem
-                    onClick={() => setIsDeleteDialogOpen(true)}
-                    className="text-destructive"
-                  >
-                    <Trash2 className="h-4 w-4 mr-2" />
-                    카테고리 삭제
-                  </DropdownMenuItem>
-                </DropdownMenuContent>
-              </DropdownMenu>
+                    <DropdownMenuItem
+                      onClick={() => setIsDeleteDialogOpen(true)}
+                      className="text-destructive"
+                    >
+                      <Trash2 className="h-4 w-4 mr-2" />
+                      카테고리 삭제
+                    </DropdownMenuItem>
+                  </DropdownMenuContent>
+                </DropdownMenu>
+              </div>
             </>
           )}
         </div>

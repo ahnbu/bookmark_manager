@@ -13,13 +13,24 @@ import { Toaster } from '@/components/ui/toaster'
 import { Bookmark } from 'lucide-react'
 
 export default function Home() {
-  const { categories, loadData, isLoading } = useBookmarkStore()
+  const { categories, loadData, isLoading, migrateFavicons } = useBookmarkStore()
   const { settings, loadSettings } = useSettingsStore()
 
   useEffect(() => {
-    loadData()
-    loadSettings()
-  }, [loadData, loadSettings])
+    const initializeApp = async () => {
+      loadData()
+      loadSettings()
+
+      // 기존 북마크들의 favicon 마이그레이션 (백그라운드에서 실행)
+      try {
+        await migrateFavicons()
+      } catch (error) {
+        console.warn('Favicon migration failed:', error)
+      }
+    }
+
+    initializeApp()
+  }, [loadData, loadSettings, migrateFavicons])
 
   if (isLoading) {
     return (

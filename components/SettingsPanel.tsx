@@ -7,7 +7,8 @@ import { Label } from '@/components/ui/label'
 import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group'
 import { ExportData } from '@/components/ExportData'
 import { ImportData } from '@/components/ImportData'
-import { Settings, Columns, Grid3X3, LayoutGrid } from 'lucide-react'
+import { Settings, Columns, Grid3X3, LayoutGrid, Trash2 } from 'lucide-react'
+import { clearFailedDomains, getCacheStats } from '@/lib/faviconCache'
 
 export function SettingsPanel() {
   const { settings, updateSettings } = useSettingsStore()
@@ -15,6 +16,13 @@ export function SettingsPanel() {
   const handleLayoutChange = (value: string) => {
     updateSettings({ layoutColumns: parseInt(value) as 1 | 2 | 3 })
   }
+
+  const handleClearFailedDomains = () => {
+    clearFailedDomains()
+    alert('실패한 도메인 목록이 초기화되었습니다. 이제 모든 사이트의 favicon을 다시 시도할 수 있습니다.')
+  }
+
+  const cacheStats = getCacheStats()
 
   return (
     <Dialog>
@@ -86,6 +94,29 @@ export function SettingsPanel() {
             <div className="flex flex-col sm:flex-row gap-2">
               <ExportData variant="outline" size="sm" />
               <ImportData variant="outline" size="sm" />
+            </div>
+          </div>
+
+          <div className="space-y-3">
+            <Label className="text-base font-medium">Favicon 관리</Label>
+            <p className="text-sm text-muted-foreground">
+              Favicon 캐시 상태를 확인하고 관리할 수 있습니다
+            </p>
+            <div className="space-y-3">
+              <div className="text-sm space-y-1">
+                <p>• 캐시된 favicon: {cacheStats.totalEntries}개</p>
+                <p>• 실패한 도메인: {cacheStats.failedDomainsCount}개</p>
+                <p>• 캐시 크기: {Math.round(cacheStats.totalSize / 1024)}KB / {Math.round(cacheStats.maxSize / 1024 / 1024)}MB</p>
+              </div>
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={handleClearFailedDomains}
+                className="w-full"
+              >
+                <Trash2 className="h-4 w-4 mr-2" />
+                실패한 도메인 목록 초기화
+              </Button>
             </div>
           </div>
 

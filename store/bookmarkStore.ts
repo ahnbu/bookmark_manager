@@ -1,6 +1,7 @@
 import { create } from 'zustand'
 import { Bookmark, Category } from '@/lib/types'
 import { storage } from '@/lib/storage'
+import { loadFaviconWithCache } from '@/lib/faviconCache'
 
 interface BookmarkStore {
   bookmarks: Bookmark[]
@@ -28,6 +29,7 @@ interface BookmarkStore {
   getBookmarksByCategory: (categoryId: string) => Bookmark[]
   getCategoryById: (id: string) => Category | undefined
   getBookmarkById: (id: string) => Bookmark | undefined
+  migrateFavicons: () => Promise<void>
 }
 
 export const useBookmarkStore = create<BookmarkStore>((set, get) => ({
@@ -248,5 +250,46 @@ export const useBookmarkStore = create<BookmarkStore>((set, get) => ({
   getBookmarkById: (id) => {
     const { bookmarks } = get()
     return bookmarks.find((bookmark) => bookmark.id === id)
+  },
+
+  migrateFavicons: async () => {
+    const { bookmarks } = get()
+    const bookmarksToUpdate: Array<{ id: string; favicon: string | null }> = []
+
+    // 기존 favicon URL을 가진 북마크들을 캐시 시스템으로 마이그레이션
+    for (const bookmark of bookmarks) {
+      if (bookmark.favicon && bookmark.favicon.startsWith('http')) {
+        try {
+          // 기존 URL 방식의 favicon을 캐시 시스템으로 변환
+          const cachedFavicon = await loadFaviconWithCache(bookmark.url)
+          bookmarksToUpdate.push({
+            id: bookmark.id,
+            favicon: cachedFavicon
+          })
+        } catch {
+          // 실패한 경우 null로 설정
+          bookmarksToUpdate.push({
+            id: bookmark.id,
+            favicon: null
+          })
+        }
+      }
+    }
+
+    // 업데이트가 필요한 북마크들을 일괄 업데이트
+    if (bookmarksToUpdate.length > 0) {
+      set((state) => {
+        const newBookmarks = state.bookmarks.map((bookmark) => {
+          const update = bookmarksToUpdate.find(u => u.id === bookmark.id)
+          if (update) {
+            return { ...bookmark, favicon: update.favicon, updatedAt: new Date() }
+          }
+          return bookmark
+        })
+
+        storage.setBookmarks(newBookmarks)
+        return { bookmarks: newBookmarks }
+      })
+    }
   },
 }))

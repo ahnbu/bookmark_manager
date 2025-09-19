@@ -34,3 +34,6 @@ next-env.d.ts
 
 # Claude Code settings
 .claude/settings.local.json
+
+# 사용자 제외 요청
+/temp

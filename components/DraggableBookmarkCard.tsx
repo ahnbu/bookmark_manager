@@ -1,5 +1,6 @@
 'use client'
 
+import { useState } from 'react'
 import { useSortable } from '@dnd-kit/sortable'
 import { CSS } from '@dnd-kit/utilities'
 import { Bookmark } from '@/lib/types'
@@ -10,6 +11,7 @@ interface DraggableBookmarkCardProps {
 }
 
 export function DraggableBookmarkCard({ bookmark }: DraggableBookmarkCardProps) {
+  const [isModalOpen, setIsModalOpen] = useState(false)
   const {
     attributes,
     listeners,
@@ -36,10 +38,10 @@ export function DraggableBookmarkCard({ bookmark }: DraggableBookmarkCardProps) 
       ref={setNodeRef}
       style={style}
       {...attributes}
-      {...listeners}
+      {...(!isModalOpen ? listeners : {})}
       className="touch-none"
     >
-      <BookmarkCard bookmark={bookmark} />
+      <BookmarkCard bookmark={bookmark} onModalStateChange={setIsModalOpen} />
     </div>
   )
 }

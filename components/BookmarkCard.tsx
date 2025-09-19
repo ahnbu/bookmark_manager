@@ -1,6 +1,6 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { Bookmark } from '@/lib/types'
 import { useBookmarkStore } from '@/store/bookmarkStore'
 import { Card, CardContent } from '@/components/ui/card'
@@ -10,21 +10,57 @@ import { Textarea } from '@/components/ui/textarea'
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog'
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '@/components/ui/dropdown-menu'
 import { ExternalLink, Edit2, Trash2, MoreVertical, Globe } from 'lucide-react'
+import { getFaviconFromCache, loadFaviconWithCache } from '@/lib/faviconCache'
 
 interface BookmarkCardProps {
   bookmark: Bookmark
+  onModalStateChange?: (isOpen: boolean) => void
 }
 
-export function BookmarkCard({ bookmark }: BookmarkCardProps) {
+export function BookmarkCard({ bookmark, onModalStateChange }: BookmarkCardProps) {
   const { updateBookmark, deleteBookmark } = useBookmarkStore()
 
   const [isEditing, setIsEditing] = useState(false)
   const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false)
+
+  // 모달 상태 변경 시 부모 컴포넌트에 알림
+  useEffect(() => {
+    const isAnyModalOpen = isEditing || isDeleteDialogOpen
+    onModalStateChange?.(isAnyModalOpen)
+  }, [isEditing, isDeleteDialogOpen, onModalStateChange])
+  const [currentFavicon, setCurrentFavicon] = useState<string | null>(bookmark.favicon || null)
   const [editData, setEditData] = useState({
     name: bookmark.name,
     url: bookmark.url,
     description: bookmark.description || '',
   })
+
+  // 컴포넌트 마운트 시 캐시에서 favicon 확인 및 로딩
+  useEffect(() => {
+    const loadFavicon = async () => {
+      try {
+        const urlObj = new URL(bookmark.url)
+        const domain = urlObj.hostname
+
+        // 먼저 캐시에서 확인
+        const cached = getFaviconFromCache(domain)
+        if (cached) {
+          setCurrentFavicon(cached)
+          return
+        }
+
+        // 캐시에 없으면 로딩 시도
+        const loadedFavicon = await loadFaviconWithCache(bookmark.url)
+        if (loadedFavicon) {
+          setCurrentFavicon(loadedFavicon)
+        }
+      } catch {
+        // URL 파싱 실패하거나 로딩 실패 시 무시
+      }
+    }
+
+    loadFavicon()
+  }, [bookmark.url])
 
   const handleSaveEdit = () => {
     if (editData.name.trim() && editData.url.trim()) {
@@ -62,19 +98,16 @@ export function BookmarkCard({ bookmark }: BookmarkCardProps) {
           <div className="flex items-start gap-3">
             {/* Favicon */}
             <div className="w-4 h-4 mt-1 flex-shrink-0">
-              {bookmark.favicon ? (
+              {currentFavicon ? (
                 <img
-                  src={bookmark.favicon}
+                  src={currentFavicon}
                   alt=""
                   className="w-full h-full"
-                  onError={(e) => {
-                    const target = e.target as HTMLImageElement
-                    target.style.display = 'none'
-                    target.nextElementSibling?.classList.remove('hidden')
-                  }}
+                  onError={() => setCurrentFavicon(null)}
                 />
-              ) : null}
-              <Globe className={`w-4 h-4 text-muted-foreground ${bookmark.favicon ? 'hidden' : ''}`} />
+              ) : (
+                <Globe className="w-4 h-4 text-muted-foreground" />
+              )}
             </div>
 
             {/* Content */}
@@ -119,12 +152,18 @@ export function BookmarkCard({ bookmark }: BookmarkCardProps) {
                       </Button>
                     </DropdownMenuTrigger>
                     <DropdownMenuContent align="end">
-                      <DropdownMenuItem onClick={() => setIsEditing(true)}>
+                      <DropdownMenuItem onClick={(e) => {
+                        e.stopPropagation()
+                        setIsEditing(true)
+                      }}>
                         <Edit2 className="h-4 w-4 mr-2" />
                         수정
                       </DropdownMenuItem>
                       <DropdownMenuItem
-                        onClick={() => setIsDeleteDialogOpen(true)}
+                        onClick={(e) => {
+                          e.stopPropagation()
+                          setIsDeleteDialogOpen(true)
+                        }}
                         className="text-destructive"
                       >
                         <Trash2 className="h-4 w-4 mr-2" />
