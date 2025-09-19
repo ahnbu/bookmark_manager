@@ -1,0 +1,149 @@
+'use client'
+
+import { useState } from 'react'
+import { useBookmarkStore } from '@/store/bookmarkStore'
+import { Button } from '@/components/ui/button'
+import { Input } from '@/components/ui/input'
+import { Textarea } from '@/components/ui/textarea'
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog'
+import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '@/components/ui/dropdown-menu'
+import { Plus, ChevronDown } from 'lucide-react'
+
+interface AddBookmarkProps {
+  defaultCategoryId?: string
+}
+
+export function AddBookmark({ defaultCategoryId }: AddBookmarkProps) {
+  const { addBookmark, categories, getBookmarksByCategory } = useBookmarkStore()
+  const [isOpen, setIsOpen] = useState(false)
+  const [selectedCategoryId, setSelectedCategoryId] = useState(defaultCategoryId || categories[0]?.id || '')
+  const [formData, setFormData] = useState({
+    name: '',
+    url: '',
+    description: '',
+  })
+
+  const selectedCategory = categories.find(cat => cat.id === selectedCategoryId)
+
+  const handleSubmit = (e: React.FormEvent) => {
+    e.preventDefault()
+    if (formData.name.trim() && formData.url.trim() && selectedCategoryId) {
+      const categoryBookmarks = getBookmarksByCategory(selectedCategoryId)
+
+      addBookmark({
+        name: formData.name.trim(),
+        url: formData.url.trim(),
+        description: formData.description.trim() || undefined,
+        categoryId: selectedCategoryId,
+        order: categoryBookmarks.length,
+        favicon: getFaviconUrl(formData.url),
+      })
+
+      setFormData({ name: '', url: '', description: '' })
+      setIsOpen(false)
+    }
+  }
+
+  const getFaviconUrl = (url: string): string => {
+    try {
+      const urlObj = new URL(url)
+      return `${urlObj.protocol}//${urlObj.hostname}/favicon.ico`
+    } catch {
+      return '/default-favicon.svg'
+    }
+  }
+
+  return (
+    <Dialog open={isOpen} onOpenChange={setIsOpen}>
+      <DialogTrigger asChild>
+        <Button>
+          <Plus className="h-4 w-4 mr-2" />
+          새 북마크
+        </Button>
+      </DialogTrigger>
+      <DialogContent>
+        <DialogHeader>
+          <DialogTitle>새 북마크 추가</DialogTitle>
+        </DialogHeader>
+        <form onSubmit={handleSubmit} className="space-y-4">
+          <div>
+            <label htmlFor="bookmark-name" className="text-sm font-medium">
+              이름
+            </label>
+            <Input
+              id="bookmark-name"
+              value={formData.name}
+              onChange={(e) => setFormData({ ...formData, name: e.target.value })}
+              placeholder="북마크 이름을 입력하세요"
+              autoFocus
+            />
+          </div>
+
+          <div>
+            <label htmlFor="bookmark-url" className="text-sm font-medium">
+              URL
+            </label>
+            <Input
+              id="bookmark-url"
+              type="url"
+              value={formData.url}
+              onChange={(e) => setFormData({ ...formData, url: e.target.value })}
+              placeholder="https://example.com"
+            />
+          </div>
+
+          <div>
+            <label htmlFor="bookmark-description" className="text-sm font-medium">
+              설명 (선택사항)
+            </label>
+            <Textarea
+              id="bookmark-description"
+              value={formData.description}
+              onChange={(e) => setFormData({ ...formData, description: e.target.value })}
+              placeholder="북마크에 대한 설명을 입력하세요"
+              rows={3}
+            />
+          </div>
+
+          <div>
+            <label className="text-sm font-medium">카테고리</label>
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <Button variant="outline" className="w-full justify-between">
+                  {selectedCategory?.name || '카테고리 선택'}
+                  <ChevronDown className="h-4 w-4" />
+                </Button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent className="w-full">
+                {categories.map((category) => (
+                  <DropdownMenuItem
+                    key={category.id}
+                    onClick={() => setSelectedCategoryId(category.id)}
+                  >
+                    {category.name}
+                  </DropdownMenuItem>
+                ))}
+              </DropdownMenuContent>
+            </DropdownMenu>
+          </div>
+
+          <div className="flex justify-end gap-2">
+            <Button
+              type="button"
+              variant="outline"
+              onClick={() => setIsOpen(false)}
+            >
+              취소
+            </Button>
+            <Button
+              type="submit"
+              disabled={!formData.name.trim() || !formData.url.trim() || !selectedCategoryId}
+            >
+              추가
+            </Button>
+          </div>
+        </form>
+      </DialogContent>
+    </Dialog>
+  )
+}
