@@ -140,9 +140,9 @@ export function SettingsPanel() {
         <div className="space-y-6">
           <div className="space-y-3">
             <Label className="text-base font-medium">레이아웃</Label>
-            <p className="text-sm text-muted-foreground">
+            {/*<p className="text-sm text-muted-foreground">
               화면에 표시할 컬럼 수를 선택하세요
-            </p>
+            </p>*/}
             <RadioGroup
               value={settings.layoutColumns.toString()}
               onValueChange={handleLayoutChange}
@@ -188,17 +188,17 @@ export function SettingsPanel() {
 
           <div className="space-y-3">
             <Label className="text-base font-medium">표시 옵션</Label>
-            <p className="text-sm text-muted-foreground">
+            {/*<p className="text-sm text-muted-foreground">
               북마크에 표시할 정보를 선택하세요
-            </p>
+            </p>*/}
 
             <div className="space-y-4">
               <div className="flex items-center justify-between">
                 <div className="space-y-0.5">
                   <Label className="text-sm font-medium">URL 표시</Label>
-                  <p className="text-xs text-muted-foreground">
+                  {/* <p className="text-xs text-muted-foreground">
                     각 북마크에 URL을 표시합니다
-                  </p>
+                  </p> */}
                 </div>
                 <Switch
                   checked={settings.displayOptions?.showUrl ?? true}
@@ -209,9 +209,9 @@ export function SettingsPanel() {
               <div className="flex items-center justify-between">
                 <div className="space-y-0.5">
                   <Label className="text-sm font-medium">메모 표시</Label>
-                  <p className="text-xs text-muted-foreground">
+                  {/* <p className="text-xs text-muted-foreground">
                     각 북마크에 설명(메모)을 표시합니다
-                  </p>
+                  </p> */}
                 </div>
                 <Switch
                   checked={settings.displayOptions?.showDescription ?? true}
@@ -221,9 +221,9 @@ export function SettingsPanel() {
 
               <div className="space-y-3">
                 <Label className="text-sm font-medium">카테고리 표시</Label>
-                <p className="text-xs text-muted-foreground">
+                {/* <p className="text-xs text-muted-foreground">
                   카테고리 순서를 변경하거나 숨기고 싶은 카테고리를 선택하세요
-                </p>
+                </p> */}
                 <div className="max-h-32 overflow-y-auto">
                   <DndContext
                     collisionDetection={closestCenter}
@@ -257,16 +257,16 @@ export function SettingsPanel() {
 
           <div className="space-y-3">
             <Label className="text-base font-medium">데이터 관리</Label>
-            <p className="text-sm text-muted-foreground">
+            {/*<p className="text-sm text-muted-foreground">
               북마크 데이터를 백업하거나 복원할 수 있습니다
-            </p>
+            </p>*/}
             <div className="flex flex-col sm:flex-row gap-2">
               <ExportData variant="outline" size="sm" />
               <ImportData variant="outline" size="sm" />
               <ImportBookmarks variant="outline" size="sm" />
             </div>
           </div>
-
+          {/*
           <div className="space-y-3">
             <Label className="text-base font-medium">데이터 마이그레이션</Label>
             <p className="text-sm text-muted-foreground">
@@ -288,17 +288,22 @@ export function SettingsPanel() {
               • 마이그레이션 후 모든 데이터는 클라우드에 저장됩니다
             </p>
           </div>
+          */}
 
           <div className="space-y-3">
             <Label className="text-base font-medium">Favicon 관리</Label>
-            <p className="text-sm text-muted-foreground">
+            {/*<p className="text-sm text-muted-foreground">
               Favicon 캐시 상태를 확인하고 관리할 수 있습니다
-            </p>
+            </p>*/}
             <div className="space-y-3">
               <div className="text-sm space-y-1">
+                {/* <p>• 캐시 favicon: {cacheStats.totalEntries}개 // 실패 도메인: {cacheStats.failedDomainsCount}개 // 캐시 크기: {Math.round(cacheStats.totalSize / 1024 / 1024)}MB / {Math.round(cacheStats.maxSize / 1024 / 1024)}MB</p> */}
+                <p>• 캐시 favicon: {cacheStats.totalEntries}개 | 실패 도메인: {cacheStats.failedDomainsCount}개 | 캐시 크기: {(cacheStats.totalSize / 1024 / 1024).toFixed(1)}MB / {(cacheStats.maxSize / 1024 / 1024).toFixed(1)}MB</p>
+                {/* 
                 <p>• 캐시된 favicon: {cacheStats.totalEntries}개</p>
                 <p>• 실패한 도메인: {cacheStats.failedDomainsCount}개</p>
-                <p>• 캐시 크기: {Math.round(cacheStats.totalSize / 1024)}KB / {Math.round(cacheStats.maxSize / 1024 / 1024)}MB</p>
+                <p>• 캐시 크기: {Math.round(cacheStats.totalSize / 1024 / 1024)}MB / {Math.round(cacheStats.maxSize / 1024 / 1024)}MB</p> */}
+                {/* <p>• 캐시 크기: (cacheStats.totalSize / 1024).toFixed(2)MB / {(cacheStats.maxSize / 1024).toFixed(2)}MB</p> */}
               </div>
               <Button
                 variant="outline"
@@ -312,6 +317,7 @@ export function SettingsPanel() {
             </div>
           </div>
 
+          {/* 
           <div className="space-y-3">
             <Label className="text-base font-medium">정보</Label>
             <div className="text-sm text-muted-foreground space-y-1">
@@ -319,7 +325,7 @@ export function SettingsPanel() {
               <p>• 브라우저 데이터를 삭제하면 북마크도 함께 삭제됩니다</p>
               <p>• 정기적으로 데이터를 백업하여 안전하게 보관하세요</p>
             </div>
-          </div>
+          </div>*/}
         </div>
       </DialogContent>
     </Dialog>
