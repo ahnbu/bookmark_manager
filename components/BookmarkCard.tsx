@@ -12,7 +12,7 @@ import { Switch } from '@/components/ui/switch'
 import { Label } from '@/components/ui/label'
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog'
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '@/components/ui/dropdown-menu'
-import { ExternalLink, Edit2, Trash2, MoreVertical, Globe, RefreshCw, Upload, Copy, GripVertical, Heart, HeartOff } from 'lucide-react'
+import { ExternalLink, Edit2, Trash2, MoreVertical, Globe, RefreshCw, Upload, Copy, GripVertical, Heart, HeartOff, ChevronDown } from 'lucide-react'
 import { getFaviconFromCache, loadFaviconWithCache } from '@/lib/faviconCache'
 
 interface BookmarkCardProps {
@@ -23,7 +23,7 @@ interface BookmarkCardProps {
 }
 
 export function BookmarkCard({ bookmark, onModalStateChange, dragHandleProps, desktopDragProps }: BookmarkCardProps) {
-  const { updateBookmark, deleteBookmark, getBookmarkById, addBookmark, getBookmarksByCategory, toggleFavorite } = useBookmarkStore()
+  const { updateBookmark, deleteBookmark, getBookmarkById, addBookmark, getBookmarksByCategory, toggleFavorite, categories, moveBookmark } = useBookmarkStore()
   const { settings } = useSettingsStore()
 
   // 항상 최신 북마크 데이터 사용
@@ -45,6 +45,7 @@ export function BookmarkCard({ bookmark, onModalStateChange, dragHandleProps, de
     url: currentBookmark.url,
     description: currentBookmark.description || '',
     isFavorite: currentBookmark.isFavorite || false,
+    categoryId: currentBookmark.categoryId,
   })
 
   // currentBookmark이 변경될 때마다 editData 업데이트
@@ -54,8 +55,9 @@ export function BookmarkCard({ bookmark, onModalStateChange, dragHandleProps, de
       url: currentBookmark.url,
       description: currentBookmark.description || '',
       isFavorite: currentBookmark.isFavorite || false,
+      categoryId: currentBookmark.categoryId,
     })
-  }, [currentBookmark.name, currentBookmark.url, currentBookmark.description, currentBookmark.isFavorite])
+  }, [currentBookmark.name, currentBookmark.url, currentBookmark.description, currentBookmark.isFavorite, currentBookmark.categoryId])
 
   // 컴포넌트 마운트 시 캐시에서 favicon 확인 및 로딩
   useEffect(() => {
@@ -97,12 +99,22 @@ export function BookmarkCard({ bookmark, onModalStateChange, dragHandleProps, de
   const handleSaveEdit = async () => {
     if (editData.name.trim() && editData.url.trim()) {
       const urlChanged = editData.url.trim() !== currentBookmark.url
+      const categoryChanged = editData.categoryId !== currentBookmark.categoryId
 
+      // 카테고리가 변경된 경우 moveBookmark 사용
+      if (categoryChanged) {
+        const targetCategoryBookmarks = getBookmarksByCategory(editData.categoryId)
+        await moveBookmark(currentBookmark.id, editData.categoryId, targetCategoryBookmarks.length)
+      }
+
+      // 기본 정보 업데이트
       updateBookmark(currentBookmark.id, {
         name: editData.name.trim(),
         url: editData.url.trim(),
         description: editData.description.trim() || undefined,
         isFavorite: editData.isFavorite,
+        // categoryId는 moveBookmark에서 처리하므로 카테고리 변경이 없을 때만 포함
+        ...(categoryChanged ? {} : { categoryId: editData.categoryId }),
       })
 
       // URL이 변경된 경우 새로운 favicon 로딩
@@ -130,6 +142,7 @@ export function BookmarkCard({ bookmark, onModalStateChange, dragHandleProps, de
       url: currentBookmark.url,
       description: currentBookmark.description || '',
       isFavorite: currentBookmark.isFavorite || false,
+      categoryId: currentBookmark.categoryId,
     })
     setIsEditing(false)
   }
@@ -434,6 +447,27 @@ export function BookmarkCard({ bookmark, onModalStateChange, dragHandleProps, de
             <DialogTitle>북마크 수정</DialogTitle>
           </DialogHeader>
           <div className="space-y-4">
+            <div>
+              <label className="text-sm font-medium">카테고리</label>
+              <DropdownMenu>
+                <DropdownMenuTrigger asChild>
+                  <Button variant="outline" className="w-full justify-between">
+                    {categories.find(cat => cat.id === editData.categoryId)?.name || '카테고리 선택'}
+                    <ChevronDown className="h-4 w-4" />
+                  </Button>
+                </DropdownMenuTrigger>
+                <DropdownMenuContent className="w-full">
+                  {categories.map((category) => (
+                    <DropdownMenuItem
+                      key={category.id}
+                      onClick={() => setEditData({ ...editData, categoryId: category.id })}
+                    >
+                      {category.name}
+                    </DropdownMenuItem>
+                  ))}
+                </DropdownMenuContent>
+              </DropdownMenu>
+            </div>
             <div>
               <label htmlFor="edit-name" className="text-sm font-medium">
                 이름
