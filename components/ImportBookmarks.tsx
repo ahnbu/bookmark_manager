@@ -37,7 +37,7 @@ export function ImportBookmarks({ variant = 'outline', size = 'default' }: Impor
       const importData = BookmarkParser.parseHtmlFile(content)
       const { categories, bookmarks } = BookmarkParser.convertToBookmarksAndCategories(importData)
 
-      importBookmarks(bookmarks, categories)
+      await importBookmarks(bookmarks, categories)
 
       toast({
         title: '북마크 가져오기 완료',
@@ -49,7 +49,7 @@ export function ImportBookmarks({ variant = 'outline', size = 'default' }: Impor
       console.error('Import error:', error)
       toast({
         title: '가져오기 실패',
-        description: error instanceof Error ? error.message : '북마크 파일을 처리하는 중 오류가 발생했습니다.',
+        description: error instanceof Error ? error.message : '데이터베이스 저장 중 오류가 발생했습니다. 네트워크 연결과 Supabase 설정을 확인해주세요.',
         variant: 'destructive',
       })
     } finally {

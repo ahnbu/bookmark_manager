@@ -42,11 +42,11 @@ export function ImportData({ variant = 'outline', size = 'default' }: ImportData
 
       if (importMode === 'replace') {
         // 덮어쓰기: 기존 데이터 삭제 후 새 데이터 적용
-        importBookmarks(processedData.bookmarks, processedData.categories)
+        await importBookmarks(processedData.bookmarks, processedData.categories)
       } else {
         // 병합: 새로운 ID로 생성하여 기존 데이터와 병합
         const dataWithNewIds = DataExporter.generateNewIds(processedData)
-        importBookmarks(dataWithNewIds.bookmarks, dataWithNewIds.categories)
+        await importBookmarks(dataWithNewIds.bookmarks, dataWithNewIds.categories)
       }
 
       toast({
@@ -59,7 +59,7 @@ export function ImportData({ variant = 'outline', size = 'default' }: ImportData
       console.error('Import error:', error)
       toast({
         title: '복원 실패',
-        description: error instanceof Error ? error.message : '백업 파일을 처리하는 중 오류가 발생했습니다.',
+        description: error instanceof Error ? error.message : '데이터베이스 저장 중 오류가 발생했습니다. 네트워크 연결과 Supabase 설정을 확인해주세요.',
         variant: 'destructive',
       })
     } finally {
