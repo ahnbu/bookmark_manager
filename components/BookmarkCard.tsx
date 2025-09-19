@@ -10,7 +10,7 @@ import { Input } from '@/components/ui/input'
 import { Textarea } from '@/components/ui/textarea'
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog'
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '@/components/ui/dropdown-menu'
-import { ExternalLink, Edit2, Trash2, MoreVertical, Globe } from 'lucide-react'
+import { ExternalLink, Edit2, Trash2, MoreVertical, Globe, RefreshCw, Upload, Copy } from 'lucide-react'
 import { getFaviconFromCache, loadFaviconWithCache } from '@/lib/faviconCache'
 
 interface BookmarkCardProps {
@@ -19,13 +19,14 @@ interface BookmarkCardProps {
 }
 
 export function BookmarkCard({ bookmark, onModalStateChange }: BookmarkCardProps) {
-  const { updateBookmark, deleteBookmark, getBookmarkById } = useBookmarkStore()
+  const { updateBookmark, deleteBookmark, getBookmarkById, addBookmark, getBookmarksByCategory } = useBookmarkStore()
   const { settings } = useSettingsStore()
 
   // 항상 최신 북마크 데이터 사용
   const currentBookmark = getBookmarkById(bookmark.id) || bookmark
   const [isEditing, setIsEditing] = useState(false)
   const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false)
+  const [isUploadingFavicon, setIsUploadingFavicon] = useState(false)
 
   // 모달 상태 변경 시 부모 컴포넌트에 알림
   useEffect(() => {
@@ -126,6 +127,75 @@ export function BookmarkCard({ bookmark, onModalStateChange }: BookmarkCardProps
     window.open(urlToOpen, '_blank', 'noopener,noreferrer')
   }
 
+  // 북마크 복제
+  const handleDuplicate = () => {
+    const categoryBookmarks = getBookmarksByCategory(currentBookmark.categoryId)
+    const currentBookmarkIndex = categoryBookmarks.findIndex(b => b.id === currentBookmark.id)
+    const newOrder = currentBookmarkIndex + 1
+
+    // 현재 북마크 이후의 모든 북마크들의 order를 1씩 증가
+    categoryBookmarks.slice(newOrder).forEach(bookmark => {
+      updateBookmark(bookmark.id, { order: bookmark.order + 1 })
+    })
+
+    // 새로운 북마크 생성
+    const duplicatedBookmark = {
+      name: `${currentBookmark.name} (복사본)`,
+      url: currentBookmark.url,
+      description: currentBookmark.description,
+      categoryId: currentBookmark.categoryId,
+      order: newOrder,
+      favicon: currentBookmark.favicon,
+      isBlacklisted: currentBookmark.isBlacklisted,
+      customFavicon: currentBookmark.customFavicon,
+    }
+
+    addBookmark(duplicatedBookmark)
+  }
+
+  // 기본 파비콘으로 변경 (블랙리스트 등록)
+  const handleSetDefaultFavicon = () => {
+    updateBookmark(currentBookmark.id, {
+      isBlacklisted: true,
+      customFavicon: undefined
+    })
+  }
+
+  // 커스텀 파비콘 업로드
+  const handleCustomFaviconUpload = (event: React.ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0]
+    if (!file) return
+
+    // 파일 크기 제한 (1MB)
+    if (file.size > 1024 * 1024) {
+      alert('파일 크기는 1MB 이하여야 합니다.')
+      return
+    }
+
+    // 이미지 파일 형식 확인
+    if (!file.type.startsWith('image/')) {
+      alert('이미지 파일만 업로드할 수 있습니다.')
+      return
+    }
+
+    setIsUploadingFavicon(true)
+
+    const reader = new FileReader()
+    reader.onload = (e) => {
+      const result = e.target?.result as string
+      updateBookmark(currentBookmark.id, {
+        customFavicon: result,
+        isBlacklisted: false
+      })
+      setIsUploadingFavicon(false)
+    }
+    reader.onerror = () => {
+      alert('파일을 읽는 중 오류가 발생했습니다.')
+      setIsUploadingFavicon(false)
+    }
+    reader.readAsDataURL(file)
+  }
+
   return (
     <>
       <Card className="group hover:shadow-md transition-shadow cursor-pointer">
@@ -133,7 +203,16 @@ export function BookmarkCard({ bookmark, onModalStateChange }: BookmarkCardProps
           <div className="flex items-start gap-3">
             {/* Favicon */}
             <div className="w-4 h-4 mt-1 flex-shrink-0">
-              {currentFavicon ? (
+              {currentBookmark.isBlacklisted ? (
+                <Globe className="w-4 h-4 text-muted-foreground" />
+              ) : currentBookmark.customFavicon ? (
+                <img
+                  src={currentBookmark.customFavicon}
+                  alt=""
+                  className="w-full h-full"
+                  onError={() => setCurrentFavicon(null)}
+                />
+              ) : currentFavicon ? (
                 <img
                   src={currentFavicon}
                   alt=""
@@ -205,6 +284,13 @@ export function BookmarkCard({ bookmark, onModalStateChange }: BookmarkCardProps
                         <Edit2 className="h-4 w-4 mr-2" />
                         수정
                       </DropdownMenuItem>
+                      <DropdownMenuItem onClick={(e) => {
+                        e.stopPropagation()
+                        handleDuplicate()
+                      }}>
+                        <Copy className="h-4 w-4 mr-2" />
+                        복제
+                      </DropdownMenuItem>
                       <DropdownMenuItem
                         onClick={(e) => {
                           e.stopPropagation()
@@ -214,6 +300,24 @@ export function BookmarkCard({ bookmark, onModalStateChange }: BookmarkCardProps
                       >
                         <Trash2 className="h-4 w-4 mr-2" />
                         삭제
+                      </DropdownMenuItem>
+                      <DropdownMenuItem onClick={(e) => {
+                        e.stopPropagation()
+                        handleSetDefaultFavicon()
+                      }}>
+                        <RefreshCw className="h-4 w-4 mr-2" />
+                        파비콘 리셋
+                      </DropdownMenuItem>
+                      <DropdownMenuItem onClick={(e) => {
+                        e.stopPropagation()
+                        const fileInput = document.createElement('input')
+                        fileInput.type = 'file'
+                        fileInput.accept = 'image/*'
+                        fileInput.onchange = handleCustomFaviconUpload
+                        fileInput.click()
+                      }} disabled={isUploadingFavicon}>
+                        <Upload className="h-4 w-4 mr-2" />
+                        {isUploadingFavicon ? '업로드 중...' : '파비콘 등록'}
                       </DropdownMenuItem>
                     </DropdownMenuContent>
                   </DropdownMenu>

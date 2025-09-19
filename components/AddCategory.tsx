@@ -27,7 +27,7 @@ export function AddCategory() {
   return (
     <Dialog open={isOpen} onOpenChange={setIsOpen}>
       <DialogTrigger asChild>
-        <Button className="mb-6">
+        <Button variant="outline">
           <Plus className="h-4 w-4 mr-2" />
           새 카테고리
         </Button>

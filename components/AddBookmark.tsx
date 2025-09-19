@@ -66,7 +66,7 @@ export function AddBookmark({ defaultCategoryId, children }: AddBookmarkProps) {
         <DialogTrigger asChild>
         {/* ✅ children이 있으면 사용하고, 없으면 기본 버튼을 렌더링 */}
         {children || (
-          <Button>
+          <Button variant="outline">
             <Plus className="h-4 w-4 mr-2" />
             새 북마크
           </Button>

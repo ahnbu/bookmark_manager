@@ -1,5 +1,9 @@
 'use client'
 
+import { useState } from 'react'
+import { DndContext, closestCenter, DragEndEvent } from '@dnd-kit/core'
+import { SortableContext, verticalListSortingStrategy, useSortable } from '@dnd-kit/sortable'
+import { CSS } from '@dnd-kit/utilities'
 import { useSettingsStore } from '@/store/settingsStore'
 import { useBookmarkStore } from '@/store/bookmarkStore'
 import { Button } from '@/components/ui/button'
@@ -11,12 +15,64 @@ import { Checkbox } from '@/components/ui/checkbox'
 import { ExportData } from '@/components/ExportData'
 import { ImportData } from '@/components/ImportData'
 import { ImportBookmarks } from '@/components/ImportBookmarks'
-import { Settings, Columns, Grid3X3, LayoutGrid, Trash2 } from 'lucide-react'
+import { Settings, Columns, Grid3X3, LayoutGrid, Trash2, GripVertical } from 'lucide-react'
 import { clearFailedDomains, getCacheStats } from '@/lib/faviconCache'
+
+interface SortableCategoryItemProps {
+  category: { id: string; name: string }
+  isHidden: boolean
+  onToggleVisibility: () => void
+}
+
+function SortableCategoryItem({ category, isHidden, onToggleVisibility }: SortableCategoryItemProps) {
+  const {
+    attributes,
+    listeners,
+    setNodeRef,
+    transform,
+    transition,
+    isDragging,
+  } = useSortable({ id: category.id })
+
+  const style = {
+    transform: CSS.Transform.toString(transform),
+    transition,
+    opacity: isDragging ? 0.5 : 1,
+  }
+
+  return (
+    <div
+      ref={setNodeRef}
+      style={style}
+      className="flex items-center space-x-2 group p-1 rounded hover:bg-muted/50 transition-colors"
+    >
+      <div
+        {...attributes}
+        {...listeners}
+        className="cursor-grab active:cursor-grabbing opacity-0 group-hover:opacity-100 transition-opacity p-1 rounded hover:bg-muted"
+        title="드래그하여 순서 변경"
+        aria-label={`${category.name} 카테고리 순서 변경`}
+      >
+        <GripVertical className="h-4 w-4 text-muted-foreground" />
+      </div>
+      <Checkbox
+        id={`category-${category.id}`}
+        checked={!isHidden}
+        onCheckedChange={onToggleVisibility}
+      />
+      <Label
+        htmlFor={`category-${category.id}`}
+        className="text-sm cursor-pointer flex-1 select-none"
+      >
+        {category.name}
+      </Label>
+    </div>
+  )
+}
 
 export function SettingsPanel() {
   const { settings, updateSettings, toggleCategoryVisibility } = useSettingsStore()
-  const { categories } = useBookmarkStore()
+  const { categories, moveCategoryOrder } = useBookmarkStore()
 
   const handleLayoutChange = (value: string) => {
     updateSettings({ layoutColumns: parseInt(value) as 1 | 2 | 3 })
@@ -32,6 +88,22 @@ export function SettingsPanel() {
         [option]: value,
       },
     })
+  }
+
+  const handleDragEnd = (event: DragEndEvent) => {
+    const { active, over } = event
+
+    if (!over || active.id === over.id) {
+      return
+    }
+
+    const sortedCategories = categories.sort((a, b) => a.order - b.order)
+    const oldIndex = sortedCategories.findIndex(cat => cat.id === active.id)
+    const newIndex = sortedCategories.findIndex(cat => cat.id === over.id)
+
+    if (oldIndex !== -1 && newIndex !== -1) {
+      moveCategoryOrder(active.id as string, newIndex)
+    }
   }
 
   const handleClearFailedDomains = () => {
@@ -139,27 +211,34 @@ export function SettingsPanel() {
               <div className="space-y-3">
                 <Label className="text-sm font-medium">카테고리 표시</Label>
                 <p className="text-xs text-muted-foreground">
-                  숨기고 싶은 카테고리를 선택하세요
+                  카테고리 순서를 변경하거나 숨기고 싶은 카테고리를 선택하세요
                 </p>
-                <div className="space-y-2 max-h-32 overflow-y-auto">
-                  {categories.map((category) => {
-                    const isHidden = settings.displayOptions?.hiddenCategories?.includes(category.id) ?? false
-                    return (
-                      <div key={category.id} className="flex items-center space-x-2">
-                        <Checkbox
-                          id={`category-${category.id}`}
-                          checked={!isHidden}
-                          onCheckedChange={() => toggleCategoryVisibility(category.id)}
-                        />
-                        <Label
-                          htmlFor={`category-${category.id}`}
-                          className="text-sm cursor-pointer"
-                        >
-                          {category.name}
-                        </Label>
+                <div className="max-h-32 overflow-y-auto">
+                  <DndContext
+                    collisionDetection={closestCenter}
+                    onDragEnd={handleDragEnd}
+                  >
+                    <SortableContext
+                      items={categories.sort((a, b) => a.order - b.order).map(cat => cat.id)}
+                      strategy={verticalListSortingStrategy}
+                    >
+                      <div className="space-y-2">
+                        {categories
+                          .sort((a, b) => a.order - b.order)
+                          .map((category) => {
+                            const isHidden = settings.displayOptions?.hiddenCategories?.includes(category.id) ?? false
+                            return (
+                              <SortableCategoryItem
+                                key={category.id}
+                                category={category}
+                                isHidden={isHidden}
+                                onToggleVisibility={() => toggleCategoryVisibility(category.id)}
+                              />
+                            )
+                          })}
                       </div>
-                    )
-                  })}
+                    </SortableContext>
+                  </DndContext>
                 </div>
               </div>
             </div>

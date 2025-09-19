@@ -8,6 +8,8 @@ export interface Bookmark {
   order: number
   createdAt: Date
   updatedAt: Date
+  isBlacklisted?: boolean // 기본 파비콘으로 표시할지 여부
+  customFavicon?: string // 사용자가 업로드한 커스텀 파비콘 (base64)
 }
 
 export interface Category {

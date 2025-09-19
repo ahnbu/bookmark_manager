@@ -62,26 +62,18 @@ export default function Home() {
         <div className="container mx-auto p-4 max-w-7xl">
           {/* Header */}
           <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 mb-8">
-            <div>
-              <div className="flex items-center gap-3">
-                <Bookmark className="h-8 w-8 text-primary" />
-                <h1 className="text-3xl font-bold">북마크 관리자</h1>
-              </div>
-              <p className="text-muted-foreground mt-1">
-                브라우저 북마크를 효율적으로 관리하세요
-              </p>
+            <div className="flex items-center gap-3">
+              <Bookmark className="h-8 w-8 text-primary" />
+              <h1 className="text-3xl font-bold">북마크 관리자</h1>
             </div>
 
             <div className="flex items-center gap-2">
+              <AddCategory />
+              <AddBookmark />
               <SettingsPanel />
             </div>
           </div>
 
-          {/* Action Buttons */}
-          <div className="flex flex-wrap gap-3 mb-6">
-            <AddCategory />
-            <AddBookmark />
-          </div>
 
           {/* Categories Grid */}
           {categories.length > 0 ? (
@@ -90,12 +82,9 @@ export default function Home() {
             <div className="text-center py-12">
               <div className="max-w-md mx-auto">
                 <h3 className="text-lg font-medium mb-2">북마크가 없습니다</h3>
-                <p className="text-muted-foreground mb-6">
-                  새 카테고리를 만들거나 브라우저에서 북마크를 가져와 시작하세요.
+                <p className="text-muted-foreground">
+                  우측 상단의 버튼을 사용하여 새 카테고리를 만들거나 북마크를 추가해보세요.
                 </p>
-                <div className="flex flex-col sm:flex-row gap-2 justify-center">
-                  <AddCategory />
-                </div>
               </div>
             </div>
           )}
