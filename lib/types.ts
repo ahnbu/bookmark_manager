@@ -10,6 +10,7 @@ export interface Bookmark {
   updatedAt: Date
   isBlacklisted?: boolean // 기본 파비콘으로 표시할지 여부
   customFavicon?: string // 사용자가 업로드한 커스텀 파비콘 (base64)
+  isFavorite?: boolean // 즐겨찾기 여부
 }
 
 export interface Category {

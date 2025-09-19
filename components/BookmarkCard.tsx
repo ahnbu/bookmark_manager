@@ -8,9 +8,11 @@ import { Card, CardContent } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Textarea } from '@/components/ui/textarea'
+import { Switch } from '@/components/ui/switch'
+import { Label } from '@/components/ui/label'
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog'
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '@/components/ui/dropdown-menu'
-import { ExternalLink, Edit2, Trash2, MoreVertical, Globe, RefreshCw, Upload, Copy, GripVertical } from 'lucide-react'
+import { ExternalLink, Edit2, Trash2, MoreVertical, Globe, RefreshCw, Upload, Copy, GripVertical, Heart, HeartOff } from 'lucide-react'
 import { getFaviconFromCache, loadFaviconWithCache } from '@/lib/faviconCache'
 
 interface BookmarkCardProps {
@@ -21,7 +23,7 @@ interface BookmarkCardProps {
 }
 
 export function BookmarkCard({ bookmark, onModalStateChange, dragHandleProps, desktopDragProps }: BookmarkCardProps) {
-  const { updateBookmark, deleteBookmark, getBookmarkById, addBookmark, getBookmarksByCategory } = useBookmarkStore()
+  const { updateBookmark, deleteBookmark, getBookmarkById, addBookmark, getBookmarksByCategory, toggleFavorite } = useBookmarkStore()
   const { settings } = useSettingsStore()
 
   // 항상 최신 북마크 데이터 사용
@@ -29,6 +31,8 @@ export function BookmarkCard({ bookmark, onModalStateChange, dragHandleProps, de
   const [isEditing, setIsEditing] = useState(false)
   const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false)
   const [isUploadingFavicon, setIsUploadingFavicon] = useState(false)
+  const [toastMessage, setToastMessage] = useState('')
+  const [showToast, setShowToast] = useState(false)
 
   // 모달 상태 변경 시 부모 컴포넌트에 알림
   useEffect(() => {
@@ -40,6 +44,7 @@ export function BookmarkCard({ bookmark, onModalStateChange, dragHandleProps, de
     name: currentBookmark.name,
     url: currentBookmark.url,
     description: currentBookmark.description || '',
+    isFavorite: currentBookmark.isFavorite || false,
   })
 
   // currentBookmark이 변경될 때마다 editData 업데이트
@@ -48,8 +53,9 @@ export function BookmarkCard({ bookmark, onModalStateChange, dragHandleProps, de
       name: currentBookmark.name,
       url: currentBookmark.url,
       description: currentBookmark.description || '',
+      isFavorite: currentBookmark.isFavorite || false,
     })
-  }, [currentBookmark.name, currentBookmark.url, currentBookmark.description])
+  }, [currentBookmark.name, currentBookmark.url, currentBookmark.description, currentBookmark.isFavorite])
 
   // 컴포넌트 마운트 시 캐시에서 favicon 확인 및 로딩
   useEffect(() => {
@@ -78,6 +84,16 @@ export function BookmarkCard({ bookmark, onModalStateChange, dragHandleProps, de
     loadFavicon()
   }, [currentBookmark.url])
 
+  // Toast 메시지 표시 함수
+  const showToastMessage = (message: string) => {
+    setToastMessage(message)
+    setShowToast(true)
+    setTimeout(() => {
+      setShowToast(false)
+      setToastMessage('')
+    }, 2000)
+  }
+
   const handleSaveEdit = async () => {
     if (editData.name.trim() && editData.url.trim()) {
       const urlChanged = editData.url.trim() !== currentBookmark.url
@@ -86,6 +102,7 @@ export function BookmarkCard({ bookmark, onModalStateChange, dragHandleProps, de
         name: editData.name.trim(),
         url: editData.url.trim(),
         description: editData.description.trim() || undefined,
+        isFavorite: editData.isFavorite,
       })
 
       // URL이 변경된 경우 새로운 favicon 로딩
@@ -112,6 +129,7 @@ export function BookmarkCard({ bookmark, onModalStateChange, dragHandleProps, de
       name: currentBookmark.name,
       url: currentBookmark.url,
       description: currentBookmark.description || '',
+      isFavorite: currentBookmark.isFavorite || false,
     })
     setIsEditing(false)
   }
@@ -224,7 +242,14 @@ export function BookmarkCard({ bookmark, onModalStateChange, dragHandleProps, de
 
   return (
     <>
-      <Card className="group hover:shadow-md transition-shadow cursor-pointer">
+      {/* Toast 메시지 */}
+      {showToast && (
+        <div className="fixed top-4 left-1/2 transform -translate-x-1/2 z-50 bg-green-500 text-white px-4 py-2 rounded-md shadow-lg transition-opacity">
+          {toastMessage}
+        </div>
+      )}
+
+      <Card className={`group hover:shadow-md transition-shadow cursor-pointer ${currentBookmark.isFavorite ? 'bg-favorite text-favorite-foreground' : ''}`}>
         <CardContent className="p-3">
           <div className="flex items-start gap-3">
             {/* Drag Handle - Mobile only */}
@@ -267,7 +292,7 @@ export function BookmarkCard({ bookmark, onModalStateChange, dragHandleProps, de
             >
               <div className="flex items-start justify-between gap-2">
                 <div className="flex-1 min-w-0">
-                  <h4 className="font-medium text-sm truncate group-hover:text-primary">
+                  <h4 className="font-medium text-sm truncate">
                     {currentBookmark.name}
                   </h4>
                   {currentBookmark.description && (settings.displayOptions?.showDescription ?? true) && (
@@ -320,7 +345,44 @@ export function BookmarkCard({ bookmark, onModalStateChange, dragHandleProps, de
                         <MoreVertical className="h-3 w-3" />
                       </Button>
                     </DropdownMenuTrigger>
+
                     <DropdownMenuContent align="end">
+                      <DropdownMenuItem onClick={async (e) => {
+                        e.stopPropagation()
+                        try {
+                          // isFavorite의 새로운 상태를 미리 계산합니다.
+                          const newIsFavorite = !currentBookmark.isFavorite
+                          await toggleFavorite(currentBookmark.id)
+                          
+                          // 상태 변경 후 즉시 메시지 표시 (setTimeout 제거)
+                          if (newIsFavorite) {
+
+                          // await toggleFavorite(currentBookmark.id)
+                          // // 상태 변경 후 메시지 표시
+                          // setTimeout(() => {
+                          //   const updatedBookmark = getBookmarkById(currentBookmark.id)
+                          //   if (updatedBookmark?.isFavorite) {
+                              showToastMessage('즐겨찾기가 등록되었습니다.')
+                            } else {
+                              showToastMessage('즐겨찾기가 해제되었습니다.')
+                            }
+                          // }, 100) // 상태 업데이트를 위한 짧은 지연
+                        } catch (error) {
+                          showToastMessage('즐겨찾기 변경에 실패했습니다.')
+                        }
+                      }}>
+                        {currentBookmark.isFavorite ? (
+                          <>
+                            <HeartOff className="h-4 w-4 mr-2" />
+                            즐겨찾기 해제
+                          </>
+                        ) : (
+                          <>
+                            <Heart className="h-4 w-4 mr-2" />
+                            즐겨찾기 등록
+                          </>
+                        )}
+                      </DropdownMenuItem>
                       <DropdownMenuItem onClick={(e) => {
                         e.stopPropagation()
                         handleDuplicate()
@@ -409,6 +471,16 @@ export function BookmarkCard({ bookmark, onModalStateChange, dragHandleProps, de
                 placeholder="북마크에 대한 설명을 입력하세요 (Ctrl+Enter로 저장)"
                 rows={3}
               />
+            </div>
+            <div className="flex items-center space-x-2">
+              <Switch
+                id="edit-favorite"
+                checked={editData.isFavorite}
+                onCheckedChange={(checked) => setEditData({ ...editData, isFavorite: checked })}
+              />
+              <Label htmlFor="edit-favorite" className="text-sm font-medium">
+                즐겨찾기
+              </Label>
             </div>
             <div className="flex justify-end gap-2">
               <Button variant="outline" onClick={handleCancelEdit}>

@@ -25,6 +25,7 @@ interface BookmarkStore {
   updateBookmark: (id: string, updates: Partial<Bookmark>) => Promise<void>
   deleteBookmark: (id: string) => Promise<void>
   moveBookmark: (id: string, newCategoryId: string, newOrder?: number) => Promise<void>
+  toggleFavorite: (id: string) => Promise<void>
 
   // Category actions
   addCategory: (category: Omit<Category, 'id' | 'createdAt' | 'updatedAt'>) => Promise<void>
@@ -65,17 +66,40 @@ export const useBookmarkStore = create<BookmarkStore>((set, get) => ({
     }
   },
 
+  // updateBookmark: async (id, updates) => {
+  //   try {
+  //     const updatedBookmark = await dbUpdateBookmark(id, updates)
+  //     set((state) => ({
+  //       bookmarks: state.bookmarks.map((bookmark) =>
+  //         bookmark.id === id ? updatedBookmark : bookmark
+  //       )
+  //     }))
+  //   } catch (error) {
+  //     console.error('Failed to update bookmark:', error)
+  //     set({ error: '북마크 수정에 실패했습니다.' })
+  //   }
+  // },
+
+  // bookmarkStore.ts의 수정된 updateBookmark 함수
+
   updateBookmark: async (id, updates) => {
     try {
-      const updatedBookmark = await dbUpdateBookmark(id, updates)
+      // 1. DB에 업데이트 요청 (이 줄은 여전히 존재하며, 가장 먼저 실행됩니다!)
+      dbUpdateBookmark(id, updates);
+
+      // 2. 위 DB 요청이 완료되기를 기다리지 않고,
+      //    일단 성공할 것이라고 "낙관적"으로 가정하고 UI(클라이언트 상태)를 즉시 업데이트합니다.
       set((state) => ({
         bookmarks: state.bookmarks.map((bookmark) =>
-          bookmark.id === id ? updatedBookmark : bookmark
+          bookmark.id === id
+            ? { ...bookmark, ...updates }
+            : bookmark
         )
-      }))
+      }));
     } catch (error) {
-      console.error('Failed to update bookmark:', error)
-      set({ error: '북마크 수정에 실패했습니다.' })
+      console.error('Failed to update bookmark:', error);
+      // 3. 만약 1번의 DB 업데이트 요청이 실패하면 여기서 에러를 잡습니다.
+      set({ error: '북마크 수정에 실패했습니다.' });
     }
   },
 
@@ -145,6 +169,20 @@ export const useBookmarkStore = create<BookmarkStore>((set, get) => ({
     } catch (error) {
       console.error('Failed to move bookmark:', error)
       set({ error: '북마크 이동에 실패했습니다.' })
+    }
+  },
+
+  toggleFavorite: async (id) => {
+    try {
+      const { bookmarks } = get()
+      const bookmark = bookmarks.find(b => b.id === id)
+      if (!bookmark) return
+
+      const newIsFavorite = !bookmark.isFavorite
+      await get().updateBookmark(id, { isFavorite: newIsFavorite })
+    } catch (error) {
+      console.error('Failed to toggle favorite:', error)
+      set({ error: '즐겨찾기 변경에 실패했습니다.' })
     }
   },
 
@@ -442,7 +480,17 @@ export const useBookmarkStore = create<BookmarkStore>((set, get) => ({
     const { bookmarks } = get()
     return bookmarks
       .filter((bookmark) => bookmark.categoryId === categoryId)
-      .sort((a, b) => a.order - b.order)
+      .sort((a, b) => {
+        // 즐겨찾기 우선 정렬
+        const aIsFavorite = a.isFavorite || false
+        const bIsFavorite = b.isFavorite || false
+
+        if (aIsFavorite && !bIsFavorite) return -1
+        if (!aIsFavorite && bIsFavorite) return 1
+
+        // 같은 즐겨찾기 상태면 order로 정렬
+        return a.order - b.order
+      })
   },
 
   getCategoryById: (id) => {

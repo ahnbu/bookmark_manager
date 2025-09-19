@@ -15,8 +15,9 @@ import { Checkbox } from '@/components/ui/checkbox'
 import { ExportData } from '@/components/ExportData'
 import { ImportData } from '@/components/ImportData'
 import { ImportBookmarks } from '@/components/ImportBookmarks'
-import { Settings, Columns, Grid3X3, LayoutGrid, Trash2, GripVertical, Database, Upload, X } from 'lucide-react'
+import { Settings, Columns, Grid3X3, LayoutGrid, Trash2, GripVertical, Database, Upload, X, Sun, Moon, Monitor } from 'lucide-react'
 import { clearFailedDomains, getCacheStats } from '@/lib/faviconCache'
+import { useTheme } from '@/components/ThemeProvider'
 
 interface SortableCategoryItemProps {
   category: { id: string; name: string }
@@ -73,9 +74,14 @@ function SortableCategoryItem({ category, isHidden, onToggleVisibility }: Sortab
 export function SettingsPanel() {
   const { settings, updateSettings, toggleCategoryVisibility } = useSettingsStore()
   const { categories, moveCategoryOrder, migrateFromLocalStorage, isLoading } = useBookmarkStore()
+  const { theme, setTheme } = useTheme()
 
   const handleLayoutChange = (value: string) => {
     updateSettings({ layoutColumns: parseInt(value) as 1 | 2 | 3 })
+  }
+
+  const handleThemeChange = (value: string) => {
+    setTheme(value as 'light' | 'dark' | 'system')
   }
 
   const handleDisplayOptionChange = (option: 'showUrl' | 'showDescription', value: boolean) => {
@@ -179,6 +185,51 @@ export function SettingsPanel() {
                     <div className="flex flex-col items-center gap-2">
                       <Grid3X3 className="h-6 w-6" />
                       <span className="text-sm">3컬럼</span>
+                    </div>
+                  </Label>
+                </div>
+              </div>
+            </RadioGroup>
+          </div>
+
+          <div className="space-y-3">
+            <Label className="text-base font-medium">테마</Label>
+            <RadioGroup
+              value={theme}
+              onValueChange={handleThemeChange}
+              className="grid grid-cols-3 gap-4"
+            >
+              <div className="flex flex-col items-center space-y-2">
+                <div className="flex items-center space-x-2">
+                  <RadioGroupItem value="light" id="theme-light" />
+                  <Label htmlFor="theme-light" className="cursor-pointer">
+                    <div className="flex flex-col items-center gap-2">
+                      <Sun className="h-6 w-6" />
+                      <span className="text-sm">라이트</span>
+                    </div>
+                  </Label>
+                </div>
+              </div>
+
+              <div className="flex flex-col items-center space-y-2">
+                <div className="flex items-center space-x-2">
+                  <RadioGroupItem value="dark" id="theme-dark" />
+                  <Label htmlFor="theme-dark" className="cursor-pointer">
+                    <div className="flex flex-col items-center gap-2">
+                      <Moon className="h-6 w-6" />
+                      <span className="text-sm">다크</span>
+                    </div>
+                  </Label>
+                </div>
+              </div>
+
+              <div className="flex flex-col items-center space-y-2">
+                <div className="flex items-center space-x-2">
+                  <RadioGroupItem value="system" id="theme-system" />
+                  <Label htmlFor="theme-system" className="cursor-pointer">
+                    <div className="flex flex-col items-center gap-2">
+                      <Monitor className="h-6 w-6" />
+                      <span className="text-sm">시스템</span>
                     </div>
                   </Label>
                 </div>
