@@ -12,6 +12,7 @@ const dbBookmarkToBookmark = (dbBookmark: DbBookmark): Bookmark => ({
   order: dbBookmark.order,
   isBlacklisted: dbBookmark.is_blacklisted,
   customFavicon: dbBookmark.custom_favicon,
+  isFavorite: dbBookmark.is_favorite,
   createdAt: new Date(dbBookmark.created_at),
   updatedAt: new Date(dbBookmark.updated_at),
 })
@@ -25,6 +26,7 @@ const bookmarkToDbBookmark = (bookmark: Omit<Bookmark, 'id' | 'createdAt' | 'upd
   order: bookmark.order,
   is_blacklisted: bookmark.isBlacklisted,
   custom_favicon: bookmark.customFavicon,
+  is_favorite: bookmark.isFavorite,
 })
 
 const dbCategoryToCategory = (dbCategory: DbCategory): Category => ({
@@ -123,6 +125,7 @@ export const updateBookmark = async (id: string, updates: Partial<Bookmark>): Pr
   if (updates.order !== undefined) updateData.order = updates.order
   if (updates.isBlacklisted !== undefined) updateData.is_blacklisted = updates.isBlacklisted
   if (updates.customFavicon !== undefined) updateData.custom_favicon = updates.customFavicon
+  if (updates.isFavorite !== undefined) updateData.is_favorite = updates.isFavorite
 
   const { data, error } = await supabase
     .from('bookmarks')

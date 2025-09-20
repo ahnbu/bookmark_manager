@@ -5,6 +5,8 @@ import { useBookmarkStore } from '@/store/bookmarkStore'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Textarea } from '@/components/ui/textarea'
+import { Switch } from '@/components/ui/switch'
+import { Label } from '@/components/ui/label'
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog'
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '@/components/ui/dropdown-menu'
 import { Plus, ChevronDown } from 'lucide-react'
@@ -24,6 +26,7 @@ export function AddBookmark({ defaultCategoryId, children }: AddBookmarkProps) {
     name: '',
     url: '',
     description: '',
+    isFavorite: false,
   })
 
   const selectedCategory = categories.find(cat => cat.id === selectedCategoryId)
@@ -41,6 +44,7 @@ export function AddBookmark({ defaultCategoryId, children }: AddBookmarkProps) {
         categoryId: selectedCategoryId,
         order: categoryBookmarks.length,
         favicon: undefined, // 초기값은 undefined
+        isFavorite: formData.isFavorite,
       }
 
       addBookmark(newBookmark)
@@ -55,7 +59,7 @@ export function AddBookmark({ defaultCategoryId, children }: AddBookmarkProps) {
         // favicon 로딩 실패해도 무시
       })
 
-      setFormData({ name: '', url: '', description: '' })
+      setFormData({ name: '', url: '', description: '', isFavorite: false })
       setIsOpen(false)
     }
   }
@@ -144,6 +148,16 @@ export function AddBookmark({ defaultCategoryId, children }: AddBookmarkProps) {
             />
           </div>
 
+          <div className="flex items-center space-x-2">
+            <Switch
+              id="bookmark-favorite"
+              checked={formData.isFavorite}
+              onCheckedChange={(checked) => setFormData({ ...formData, isFavorite: checked })}
+            />
+            <Label htmlFor="bookmark-favorite" className="text-sm font-medium">
+              즐겨찾기
+            </Label>
+          </div>
 
           <div className="flex justify-end gap-2">
             <Button

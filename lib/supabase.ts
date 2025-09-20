@@ -16,6 +16,7 @@ export interface DbBookmark {
   order: number
   is_blacklisted?: boolean
   custom_favicon?: string
+  is_favorite?: boolean
   created_at: string
   updated_at: string
 }
