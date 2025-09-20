@@ -159,7 +159,7 @@ export function SettingsPanel() {
                   <RadioGroupItem value="1" id="layout-1" />
                   <Label htmlFor="layout-1" className="cursor-pointer">
                     <div className="flex flex-col items-center gap-2">
-                      <Columns className="h-6 w-6" />
+                      {/* <Columns className="h-6 w-6" /> */}
                       <span className="text-sm">1컬럼</span>
                     </div>
                   </Label>
@@ -171,7 +171,7 @@ export function SettingsPanel() {
                   <RadioGroupItem value="2" id="layout-2" />
                   <Label htmlFor="layout-2" className="cursor-pointer">
                     <div className="flex flex-col items-center gap-2">
-                      <LayoutGrid className="h-6 w-6" />
+                      {/* <LayoutGrid className="h-6 w-6" /> */}
                       <span className="text-sm">2컬럼</span>
                     </div>
                   </Label>
@@ -183,7 +183,7 @@ export function SettingsPanel() {
                   <RadioGroupItem value="3" id="layout-3" />
                   <Label htmlFor="layout-3" className="cursor-pointer">
                     <div className="flex flex-col items-center gap-2">
-                      <Grid3X3 className="h-6 w-6" />
+                      {/* <Grid3X3 className="h-6 w-6" /> */}
                       <span className="text-sm">3컬럼</span>
                     </div>
                   </Label>
@@ -204,7 +204,7 @@ export function SettingsPanel() {
                   <RadioGroupItem value="light" id="theme-light" />
                   <Label htmlFor="theme-light" className="cursor-pointer">
                     <div className="flex flex-col items-center gap-2">
-                      <Sun className="h-6 w-6" />
+                      {/* <Sun className="h-6 w-6" /> */}
                       <span className="text-sm">라이트</span>
                     </div>
                   </Label>
@@ -216,7 +216,7 @@ export function SettingsPanel() {
                   <RadioGroupItem value="dark" id="theme-dark" />
                   <Label htmlFor="theme-dark" className="cursor-pointer">
                     <div className="flex flex-col items-center gap-2">
-                      <Moon className="h-6 w-6" />
+                      {/* <Moon className="h-6 w-6" /> */}
                       <span className="text-sm">다크</span>
                     </div>
                   </Label>
@@ -228,7 +228,7 @@ export function SettingsPanel() {
                   <RadioGroupItem value="system" id="theme-system" />
                   <Label htmlFor="theme-system" className="cursor-pointer">
                     <div className="flex flex-col items-center gap-2">
-                      <Monitor className="h-6 w-6" />
+                      {/* <Monitor className="h-6 w-6" /> */}
                       <span className="text-sm">시스템</span>
                     </div>
                   </Label>
