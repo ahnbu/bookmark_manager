@@ -71,7 +71,7 @@ export function AddBookmark({ defaultCategoryId, children }: AddBookmarkProps) {
         {/* ✅ children이 있으면 사용하고, 없으면 기본 버튼을 렌더링 */}
         {children || (
           <Button variant="outline">
-            <Plus className="h-4 w-4 mr-2" />
+            <Plus className="h-4 w-4 mr-0" />
             새 북마크
           </Button>
         )}

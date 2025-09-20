@@ -134,7 +134,7 @@ export function SettingsPanel() {
     <Dialog>
       <DialogTrigger asChild>
         <Button variant="outline">
-          <Settings className="h-4 w-4 mr-2" />
+          <Settings className="h-4 w-4 mr-0" />
           설정
         </Button>
       </DialogTrigger>
