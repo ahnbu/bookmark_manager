@@ -10,8 +10,9 @@ import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog'
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '@/components/ui/dropdown-menu'
-import { Plus, Edit2, Trash2, MoreVertical, RefreshCw, Copy } from 'lucide-react'
+import { Plus, Edit2, Trash2, MoreVertical, RefreshCw, Copy, Eye, EyeOff } from 'lucide-react'
 import { DraggableBookmarkCard } from './DraggableBookmarkCard'
+import { HiddenBookmarksModal } from './HiddenBookmarksModal'
 import { forceRefreshFavicon } from '@/lib/faviconCache'
 import { AddBookmark } from './AddBookmark' // ✅ 이 라인을 추가하세요.
 
@@ -20,13 +21,14 @@ interface CategorySectionProps {
 }
 
 export function CategorySection({ category }: CategorySectionProps) {
-  const { getBookmarksByCategory, updateCategory, deleteCategory, duplicateCategory } = useBookmarkStore()
+  const { getBookmarksByCategory, updateCategory, deleteCategory, duplicateCategory, toggleCategoryVisibility } = useBookmarkStore()
   const bookmarks = getBookmarksByCategory(category.id)
 
   const [isEditing, setIsEditing] = useState(false)
   const [editName, setEditName] = useState(category.name)
   const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false)
   const [isRefreshing, setIsRefreshing] = useState(false)
+  const [isHiddenModalOpen, setIsHiddenModalOpen] = useState(false)
 
   const { setNodeRef, isOver } = useDroppable({
     id: category.id,
@@ -135,6 +137,20 @@ export function CategorySection({ category }: CategorySectionProps) {
                       <Copy className="h-4 w-4 mr-2" />
                       카테고리 복제
                     </DropdownMenuItem>
+                    <DropdownMenuItem onClick={() => setIsHiddenModalOpen(true)}>
+                      <Eye className="h-4 w-4 mr-2" />
+                      숨기기 관리
+                    </DropdownMenuItem>
+                    <DropdownMenuItem onClick={async () => {
+                      try {
+                        await toggleCategoryVisibility(category.id)
+                      } catch (error) {
+                        console.error('Failed to hide category:', error)
+                      }
+                    }}>
+                      <EyeOff className="h-4 w-4 mr-2" />
+                      카테고리 숨기기
+                    </DropdownMenuItem>
                     <DropdownMenuItem
                       onClick={() => setIsDeleteDialogOpen(true)}
                       className="text-destructive"
@@ -195,6 +211,14 @@ export function CategorySection({ category }: CategorySectionProps) {
           </div>
         </DialogContent>
       </Dialog>
+
+      {/* 숨겨진 북마크 관리 모달 */}
+      <HiddenBookmarksModal
+        categoryId={category.id}
+        categoryName={category.name}
+        isOpen={isHiddenModalOpen}
+        onOpenChange={setIsHiddenModalOpen}
+      />
     </Card>
   )
 }

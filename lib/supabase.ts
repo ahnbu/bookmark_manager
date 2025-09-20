@@ -17,6 +17,7 @@ export interface DbBookmark {
   is_blacklisted?: boolean
   custom_favicon?: string
   is_favorite?: boolean
+  is_hidden?: boolean
   created_at: string
   updated_at: string
 }
@@ -26,6 +27,7 @@ export interface DbCategory {
   name: string
   color?: string
   order: number
+  is_hidden?: boolean
   created_at: string
   updated_at: string
 }

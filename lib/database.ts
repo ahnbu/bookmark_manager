@@ -13,6 +13,7 @@ const dbBookmarkToBookmark = (dbBookmark: DbBookmark): Bookmark => ({
   isBlacklisted: dbBookmark.is_blacklisted,
   customFavicon: dbBookmark.custom_favicon,
   isFavorite: dbBookmark.is_favorite,
+  isHidden: dbBookmark.is_hidden,
   createdAt: new Date(dbBookmark.created_at),
   updatedAt: new Date(dbBookmark.updated_at),
 })
@@ -27,6 +28,7 @@ const bookmarkToDbBookmark = (bookmark: Omit<Bookmark, 'id' | 'createdAt' | 'upd
   is_blacklisted: bookmark.isBlacklisted,
   custom_favicon: bookmark.customFavicon,
   is_favorite: bookmark.isFavorite,
+  is_hidden: bookmark.isHidden,
 })
 
 const dbCategoryToCategory = (dbCategory: DbCategory): Category => ({
@@ -34,6 +36,7 @@ const dbCategoryToCategory = (dbCategory: DbCategory): Category => ({
   name: dbCategory.name,
   color: dbCategory.color,
   order: dbCategory.order,
+  isHidden: dbCategory.is_hidden,
   createdAt: new Date(dbCategory.created_at),
   updatedAt: new Date(dbCategory.updated_at),
 })
@@ -42,6 +45,7 @@ const categoryToDbCategory = (category: Omit<Category, 'id' | 'createdAt' | 'upd
   name: category.name,
   color: category.color,
   order: category.order,
+  is_hidden: category.isHidden,
 })
 
 // Categories

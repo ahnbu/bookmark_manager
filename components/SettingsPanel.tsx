@@ -96,6 +96,10 @@ export function SettingsPanel() {
     })
   }
 
+  const handleMasonryGridToggle = (value: boolean) => {
+    updateSettings({ enableMasonryGrid: value })
+  }
+
   const handleDragEnd = (event: DragEndEvent) => {
     const { active, over } = event
 
@@ -149,47 +153,65 @@ export function SettingsPanel() {
             {/*<p className="text-sm text-muted-foreground">
               화면에 표시할 컬럼 수를 선택하세요
             </p>*/}
-            <RadioGroup
-              value={settings.layoutColumns.toString()}
-              onValueChange={handleLayoutChange}
-              className="grid grid-cols-3 gap-4"
-            >
-              <div className="flex flex-col items-center space-y-2">
-                <div className="flex items-center space-x-2">
-                  <RadioGroupItem value="1" id="layout-1" />
-                  <Label htmlFor="layout-1" className="cursor-pointer">
-                    <div className="flex flex-col items-center gap-2">
-                      {/* <Columns className="h-6 w-6" /> */}
-                      <span className="text-sm">1컬럼</span>
-                    </div>
-                  </Label>
+
+            <div className="space-y-4">
+              <div className="flex items-center justify-between">
+                <div className="space-y-0.5">
+                  <Label className="text-sm font-medium">핀터레스트 스타일 그리드</Label>
+                  <p className="text-xs text-muted-foreground">
+                    카드 높이에 따른 자연스러운 배치
+                  </p>
                 </div>
+                <Switch
+                  checked={settings.enableMasonryGrid ?? false}
+                  onCheckedChange={handleMasonryGridToggle}
+                />
               </div>
 
-              <div className="flex flex-col items-center space-y-2">
-                <div className="flex items-center space-x-2">
-                  <RadioGroupItem value="2" id="layout-2" />
-                  <Label htmlFor="layout-2" className="cursor-pointer">
-                    <div className="flex flex-col items-center gap-2">
-                      {/* <LayoutGrid className="h-6 w-6" /> */}
-                      <span className="text-sm">2컬럼</span>
+              {!settings.enableMasonryGrid && (
+                <RadioGroup
+                  value={settings.layoutColumns.toString()}
+                  onValueChange={handleLayoutChange}
+                  className="grid grid-cols-3 gap-4"
+                >
+                  <div className="flex flex-col items-center space-y-2">
+                    <div className="flex items-center space-x-2">
+                      <RadioGroupItem value="1" id="layout-1" />
+                      <Label htmlFor="layout-1" className="cursor-pointer">
+                        <div className="flex flex-col items-center gap-2">
+                          {/* <Columns className="h-6 w-6" /> */}
+                          <span className="text-sm">1컬럼</span>
+                        </div>
+                      </Label>
                     </div>
-                  </Label>
-                </div>
-              </div>
+                  </div>
 
-              <div className="flex flex-col items-center space-y-2">
-                <div className="flex items-center space-x-2">
-                  <RadioGroupItem value="3" id="layout-3" />
-                  <Label htmlFor="layout-3" className="cursor-pointer">
-                    <div className="flex flex-col items-center gap-2">
-                      {/* <Grid3X3 className="h-6 w-6" /> */}
-                      <span className="text-sm">3컬럼</span>
+                  <div className="flex flex-col items-center space-y-2">
+                    <div className="flex items-center space-x-2">
+                      <RadioGroupItem value="2" id="layout-2" />
+                      <Label htmlFor="layout-2" className="cursor-pointer">
+                        <div className="flex flex-col items-center gap-2">
+                          {/* <LayoutGrid className="h-6 w-6" /> */}
+                          <span className="text-sm">2컬럼</span>
+                        </div>
+                      </Label>
                     </div>
-                  </Label>
-                </div>
-              </div>
-            </RadioGroup>
+                  </div>
+
+                  <div className="flex flex-col items-center space-y-2">
+                    <div className="flex items-center space-x-2">
+                      <RadioGroupItem value="3" id="layout-3" />
+                      <Label htmlFor="layout-3" className="cursor-pointer">
+                        <div className="flex flex-col items-center gap-2">
+                          {/* <Grid3X3 className="h-6 w-6" /> */}
+                          <span className="text-sm">3컬럼</span>
+                        </div>
+                      </Label>
+                    </div>
+                  </div>
+                </RadioGroup>
+              )}
+            </div>
           </div>
 
           <div className="space-y-3">
@@ -270,39 +292,6 @@ export function SettingsPanel() {
                 />
               </div>
 
-              <div className="space-y-3">
-                <Label className="text-sm font-medium">카테고리 표시</Label>
-                {/* <p className="text-xs text-muted-foreground">
-                  카테고리 순서를 변경하거나 숨기고 싶은 카테고리를 선택하세요
-                </p> */}
-                <div className="max-h-32 overflow-y-auto">
-                  <DndContext
-                    collisionDetection={closestCenter}
-                    onDragEnd={handleDragEnd}
-                  >
-                    <SortableContext
-                      items={categories.sort((a, b) => a.order - b.order).map(cat => cat.id)}
-                      strategy={verticalListSortingStrategy}
-                    >
-                      <div className="space-y-2">
-                        {categories
-                          .sort((a, b) => a.order - b.order)
-                          .map((category) => {
-                            const isHidden = settings.displayOptions?.hiddenCategories?.includes(category.id) ?? false
-                            return (
-                              <SortableCategoryItem
-                                key={category.id}
-                                category={category}
-                                isHidden={isHidden}
-                                onToggleVisibility={() => toggleCategoryVisibility(category.id)}
-                              />
-                            )
-                          })}
-                      </div>
-                    </SortableContext>
-                  </DndContext>
-                </div>
-              </div>
             </div>
           </div>
 

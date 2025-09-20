@@ -5,6 +5,7 @@ import { useBookmarkStore } from '@/store/bookmarkStore'
 import { useSettingsStore } from '@/store/settingsStore'
 import { DragDropProvider } from '@/components/DragDropProvider'
 import { CategoryList } from '@/components/CategoryList'
+import { MasonryGrid } from '@/components/MasonryGrid'
 import { AddCategory } from '@/components/AddCategory'
 import { AddBookmark } from '@/components/AddBookmark'
 import { SettingsPanel } from '@/components/SettingsPanel'
@@ -12,8 +13,10 @@ import { Toaster } from '@/components/ui/toaster'
 import { Bookmark } from 'lucide-react'
 
 export default function Home() {
-  const { categories, loadData, isLoading, migrateFavicons } = useBookmarkStore()
+  const { categories, getVisibleCategories, loadData, isLoading, migrateFavicons } = useBookmarkStore()
   const { settings, loadSettings } = useSettingsStore()
+
+  const visibleCategories = getVisibleCategories()
 
   useEffect(() => {
     const initializeApp = async () => {
@@ -76,8 +79,12 @@ export default function Home() {
 
 
           {/* Categories Grid */}
-          {categories.length > 0 ? (
-            <CategoryList categories={categories} gridCols={getGridCols()} />
+          {visibleCategories.length > 0 ? (
+            settings.enableMasonryGrid ? (
+              <MasonryGrid categories={visibleCategories} />
+            ) : (
+              <CategoryList categories={visibleCategories} gridCols={getGridCols()} />
+            )
           ) : (
             <div className="text-center py-12">
               <div className="max-w-md mx-auto">

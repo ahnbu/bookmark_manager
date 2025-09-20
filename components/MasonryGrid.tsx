@@ -4,13 +4,11 @@ import { SortableContext, verticalListSortingStrategy } from '@dnd-kit/sortable'
 import { useSortable } from '@dnd-kit/sortable'
 import { CSS } from '@dnd-kit/utilities'
 import { Category } from '@/lib/types'
-import { useBookmarkStore } from '@/store/bookmarkStore'
 import { CategorySection } from './CategorySection'
 import { GripVertical } from 'lucide-react'
 
-interface CategoryListProps {
+interface MasonryGridProps {
   categories: Category[]
-  gridCols: string
 }
 
 interface DraggableCategoryProps {
@@ -51,14 +49,14 @@ function DraggableCategory({ category }: DraggableCategoryProps) {
       </div>
 
       {/* 카테고리 섹션 */}
-      <div className="group">
+      <div className="group mb-6 break-inside-avoid">
         <CategorySection category={category} />
       </div>
     </div>
   )
 }
 
-export function CategoryList({ categories, gridCols }: CategoryListProps) {
+export function MasonryGrid({ categories }: MasonryGridProps) {
   // categories는 이미 getVisibleCategories()로 필터링됨
   const sortedCategories = categories.sort((a, b) => a.order - b.order)
 
@@ -67,7 +65,7 @@ export function CategoryList({ categories, gridCols }: CategoryListProps) {
       items={sortedCategories.map(c => c.id)}
       strategy={verticalListSortingStrategy}
     >
-      <div className={`grid gap-6 ${gridCols}`}>
+      <div className="columns-1 md:columns-2 lg:columns-3 gap-6">
         {sortedCategories.map((category) => (
           <DraggableCategory key={category.id} category={category} />
         ))}

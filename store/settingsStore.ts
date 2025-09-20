@@ -5,18 +5,17 @@ import { storage } from '@/lib/storage'
 interface SettingsStore {
   settings: Settings
   updateSettings: (updates: Partial<Settings>) => void
-  toggleCategoryVisibility: (categoryId: string) => void
   loadSettings: () => void
   resetSettings: () => void
 }
 
 const defaultSettings: Settings = {
   layoutColumns: 2,
+  enableMasonryGrid: false,
   theme: 'system',
   displayOptions: {
     showUrl: true,
     showDescription: true,
-    hiddenCategories: [],
   },
 }
 
@@ -31,29 +30,6 @@ export const useSettingsStore = create<SettingsStore>((set) => ({
     })
   },
 
-  toggleCategoryVisibility: (categoryId) => {
-    set((state) => {
-      const currentHidden = state.settings.displayOptions?.hiddenCategories || []
-      const isHidden = currentHidden.includes(categoryId)
-
-      const newHiddenCategories = isHidden
-        ? currentHidden.filter(id => id !== categoryId)
-        : [...currentHidden, categoryId]
-
-      const newSettings = {
-        ...state.settings,
-        displayOptions: {
-          ...state.settings.displayOptions,
-          showUrl: state.settings.displayOptions?.showUrl ?? true,
-          showDescription: state.settings.displayOptions?.showDescription ?? true,
-          hiddenCategories: newHiddenCategories,
-        },
-      }
-
-      storage.setSettings(newSettings)
-      return { settings: newSettings }
-    })
-  },
 
   loadSettings: () => {
     try {
@@ -61,10 +37,10 @@ export const useSettingsStore = create<SettingsStore>((set) => ({
       const mergedSettings: Settings = {
         ...defaultSettings,
         ...settings,
+        enableMasonryGrid: settings.enableMasonryGrid ?? defaultSettings.enableMasonryGrid,
         displayOptions: {
           showUrl: settings.displayOptions?.showUrl ?? defaultSettings.displayOptions!.showUrl,
           showDescription: settings.displayOptions?.showDescription ?? defaultSettings.displayOptions!.showDescription,
-          hiddenCategories: settings.displayOptions?.hiddenCategories ?? defaultSettings.displayOptions!.hiddenCategories,
         },
       }
       set({ settings: mergedSettings })

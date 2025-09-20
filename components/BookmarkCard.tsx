@@ -12,7 +12,7 @@ import { Switch } from '@/components/ui/switch'
 import { Label } from '@/components/ui/label'
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog'
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '@/components/ui/dropdown-menu'
-import { ExternalLink, Edit2, Trash2, MoreVertical, Globe, RefreshCw, Upload, Copy, GripVertical, Heart, HeartOff, ChevronDown } from 'lucide-react'
+import { ExternalLink, Edit2, Trash2, MoreVertical, Globe, RefreshCw, Upload, Copy, GripVertical, Heart, HeartOff, ChevronDown, EyeOff } from 'lucide-react'
 import { getFaviconFromCache, loadFaviconWithCache } from '@/lib/faviconCache'
 
 interface BookmarkCardProps {
@@ -23,7 +23,7 @@ interface BookmarkCardProps {
 }
 
 export function BookmarkCard({ bookmark, onModalStateChange, dragHandleProps, desktopDragProps }: BookmarkCardProps) {
-  const { updateBookmark, deleteBookmark, getBookmarkById, addBookmark, getBookmarksByCategory, toggleFavorite, categories, moveBookmark } = useBookmarkStore()
+  const { updateBookmark, deleteBookmark, getBookmarkById, addBookmark, getBookmarksByCategory, toggleFavorite, toggleBookmarkVisibility, categories, moveBookmark } = useBookmarkStore()
   const { settings } = useSettingsStore()
 
   // 항상 최신 북마크 데이터 사용
@@ -318,10 +318,19 @@ export function BookmarkCard({ bookmark, onModalStateChange, dragHandleProps, de
                     </p>
                   )}
                   {(settings.displayOptions?.showUrl ?? true) && (
-                    <p className="text-xs text-muted-foreground mt-1 truncate">
+                    <p className={`text-xs mt-1 truncate ${
+                      currentBookmark.isFavorite
+                        ? 'text-primary-subtle'
+                        : 'text-muted-foreground'
+                    }`}>
                       {currentBookmark.url}
                     </p>
                   )}
+                  {/* {(settings.displayOptions?.showUrl ?? true) && (
+                    <p className="text-xs text-muted-foreground mt-1 truncate">
+                      {currentBookmark.url}
+                    </p>
+                  )} */}
                 </div>
 
                 {/* Actions */}
@@ -434,6 +443,18 @@ export function BookmarkCard({ bookmark, onModalStateChange, dragHandleProps, de
                       }} disabled={isUploadingFavicon}>
                         <Upload className="h-4 w-4 mr-2" />
                         {isUploadingFavicon ? '업로드 중...' : '파비콘 등록'}
+                      </DropdownMenuItem>
+                      <DropdownMenuItem onClick={async (e) => {
+                        e.stopPropagation()
+                        try {
+                          await toggleBookmarkVisibility(currentBookmark.id)
+                          showToastMessage('북마크가 숨겨졌습니다.')
+                        } catch (error) {
+                          showToastMessage('북마크 숨기기에 실패했습니다.')
+                        }
+                      }}>
+                        <EyeOff className="h-4 w-4 mr-2" />
+                        숨기기
                       </DropdownMenuItem>
                     </DropdownMenuContent>
                   </DropdownMenu>

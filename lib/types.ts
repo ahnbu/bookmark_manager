@@ -11,6 +11,7 @@ export interface Bookmark {
   isBlacklisted?: boolean // 기본 파비콘으로 표시할지 여부
   customFavicon?: string // 사용자가 업로드한 커스텀 파비콘 (base64)
   isFavorite?: boolean // 즐겨찾기 여부
+  isHidden?: boolean // 숨기기 여부
 }
 
 export interface Category {
@@ -18,17 +19,18 @@ export interface Category {
   name: string
   color?: string
   order: number
+  isHidden?: boolean
   createdAt: Date
   updatedAt: Date
 }
 
 export interface Settings {
   layoutColumns: 1 | 2 | 3
+  enableMasonryGrid?: boolean
   theme?: 'light' | 'dark' | 'system'
   displayOptions?: {
     showUrl: boolean
     showDescription: boolean
-    hiddenCategories: string[]
   }
 }
 

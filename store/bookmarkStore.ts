@@ -26,6 +26,7 @@ interface BookmarkStore {
   deleteBookmark: (id: string) => Promise<void>
   moveBookmark: (id: string, newCategoryId: string, newOrder?: number) => Promise<void>
   toggleFavorite: (id: string) => Promise<void>
+  toggleBookmarkVisibility: (id: string) => Promise<void>
 
   // Category actions
   addCategory: (category: Omit<Category, 'id' | 'createdAt' | 'updatedAt'>) => Promise<void>
@@ -33,6 +34,7 @@ interface BookmarkStore {
   deleteCategory: (id: string) => Promise<void>
   duplicateCategory: (id: string) => Promise<void>
   moveCategoryOrder: (id: string, newOrder: number) => Promise<void>
+  toggleCategoryVisibility: (id: string) => Promise<void>
 
   // Data loading
   loadData: () => Promise<void>
@@ -44,6 +46,8 @@ interface BookmarkStore {
 
   // Utilities
   getBookmarksByCategory: (categoryId: string) => Bookmark[]
+  getHiddenBookmarksByCategory: (categoryId: string) => Bookmark[]
+  getVisibleCategories: () => Category[]
   getCategoryById: (id: string) => Category | undefined
   getBookmarkById: (id: string) => Bookmark | undefined
 }
@@ -186,6 +190,20 @@ export const useBookmarkStore = create<BookmarkStore>((set, get) => ({
     }
   },
 
+  toggleBookmarkVisibility: async (id) => {
+    try {
+      const { bookmarks } = get()
+      const bookmark = bookmarks.find(b => b.id === id)
+      if (!bookmark) return
+
+      const newIsHidden = !bookmark.isHidden
+      await get().updateBookmark(id, { isHidden: newIsHidden })
+    } catch (error) {
+      console.error('Failed to toggle bookmark visibility:', error)
+      set({ error: '북마크 숨기기 변경에 실패했습니다.' })
+    }
+  },
+
   addCategory: async (categoryData) => {
     try {
       const category = await createCategory(categoryData)
@@ -295,6 +313,20 @@ export const useBookmarkStore = create<BookmarkStore>((set, get) => ({
     } catch (error) {
       console.error('Failed to move category:', error)
       set({ error: '카테고리 순서 변경에 실패했습니다.' })
+    }
+  },
+
+  toggleCategoryVisibility: async (id) => {
+    try {
+      const { categories } = get()
+      const category = categories.find(c => c.id === id)
+      if (!category) return
+
+      const newIsHidden = !category.isHidden
+      await get().updateCategory(id, { isHidden: newIsHidden })
+    } catch (error) {
+      console.error('Failed to toggle category visibility:', error)
+      set({ error: '카테고리 숨기기 변경에 실패했습니다.' })
     }
   },
 
@@ -479,7 +511,7 @@ export const useBookmarkStore = create<BookmarkStore>((set, get) => ({
   getBookmarksByCategory: (categoryId) => {
     const { bookmarks } = get()
     return bookmarks
-      .filter((bookmark) => bookmark.categoryId === categoryId)
+      .filter((bookmark) => bookmark.categoryId === categoryId && !bookmark.isHidden)
       .sort((a, b) => {
         // 즐겨찾기 우선 정렬
         const aIsFavorite = a.isFavorite || false
@@ -491,6 +523,20 @@ export const useBookmarkStore = create<BookmarkStore>((set, get) => ({
         // 같은 즐겨찾기 상태면 order로 정렬
         return a.order - b.order
       })
+  },
+
+  getHiddenBookmarksByCategory: (categoryId) => {
+    const { bookmarks } = get()
+    return bookmarks
+      .filter((bookmark) => bookmark.categoryId === categoryId && bookmark.isHidden)
+      .sort((a, b) => a.order - b.order)
+  },
+
+  getVisibleCategories: () => {
+    const { categories } = get()
+    return categories
+      .filter((category) => !category.isHidden)
+      .sort((a, b) => a.order - b.order)
   },
 
   getCategoryById: (id) => {
