@@ -72,8 +72,8 @@ function SortableCategoryItem({ category, isHidden, onToggleVisibility }: Sortab
 }
 
 export function SettingsPanel() {
-  const { settings, updateSettings, toggleCategoryVisibility } = useSettingsStore()
-  const { categories, moveCategoryOrder, migrateFromLocalStorage, isLoading } = useBookmarkStore()
+  const { settings, updateSettings } = useSettingsStore()
+  const { categories, moveCategoryOrder, migrateFromLocalStorage, isLoading, toggleCategoryVisibility } = useBookmarkStore()
   const { theme, setTheme } = useTheme()
 
   const handleLayoutChange = (value: string) => {
@@ -292,6 +292,34 @@ export function SettingsPanel() {
                 />
               </div>
 
+            </div>
+          </div>
+
+          <div className="space-y-3">
+            <Label className="text-base font-medium">카테고리 표시 설정</Label>
+            <div className="space-y-2 max-h-48 overflow-y-auto border rounded-md p-3">
+              <DndContext
+                collisionDetection={closestCenter}
+                onDragEnd={handleDragEnd}
+              >
+                <SortableContext
+                  items={categories.map(cat => cat.id)}
+                  strategy={verticalListSortingStrategy}
+                >
+                  {categories
+                    .sort((a, b) => a.order - b.order)
+                    .map((category) => (
+                      <SortableCategoryItem
+                        key={category.id}
+                        category={category}
+                        isHidden={category.isHidden || false}
+                        onToggleVisibility={async () => {
+                          await toggleCategoryVisibility(category.id)
+                        }}
+                      />
+                    ))}
+                </SortableContext>
+              </DndContext>
             </div>
           </div>
 

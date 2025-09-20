@@ -14,14 +14,21 @@ import { Bookmark } from 'lucide-react'
 
 export default function Home() {
   const { categories, getVisibleCategories, loadData, isLoading, migrateFavicons } = useBookmarkStore()
-  const { settings, loadSettings } = useSettingsStore()
+  const { settings, loadSettings, migrateToSupabase } = useSettingsStore()
 
   const visibleCategories = getVisibleCategories()
 
   useEffect(() => {
     const initializeApp = async () => {
-      loadData()
-      loadSettings()
+      await loadData()
+      await loadSettings()
+
+      // 설정 마이그레이션 (백그라운드에서 실행)
+      try {
+        await migrateToSupabase()
+      } catch (error) {
+        console.warn('Settings migration failed:', error)
+      }
 
       // 기존 북마크들의 favicon 마이그레이션 (백그라운드에서 실행)
       try {
@@ -32,7 +39,7 @@ export default function Home() {
     }
 
     initializeApp()
-  }, [loadData, loadSettings, migrateFavicons])
+  }, [loadData, loadSettings, migrateToSupabase, migrateFavicons])
 
   if (isLoading) {
     return (

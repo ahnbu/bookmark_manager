@@ -31,3 +31,14 @@ export interface DbCategory {
   created_at: string
   updated_at: string
 }
+
+export interface DbSettings {
+  id: string
+  layout_columns: number
+  enable_masonry_grid: boolean
+  theme: string
+  show_url: boolean
+  show_description: boolean
+  created_at: string
+  updated_at: string
+}

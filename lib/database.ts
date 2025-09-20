@@ -1,5 +1,5 @@
-import { supabase, DbBookmark, DbCategory } from './supabase'
-import { Bookmark, Category } from './types'
+import { supabase, DbBookmark, DbCategory, DbSettings } from './supabase'
+import { Bookmark, Category, Settings } from './types'
 
 // Type converters
 const dbBookmarkToBookmark = (dbBookmark: DbBookmark): Bookmark => ({
@@ -48,6 +48,24 @@ const categoryToDbCategory = (category: Omit<Category, 'id' | 'createdAt' | 'upd
   is_hidden: category.isHidden,
 })
 
+const dbSettingsToSettings = (dbSettings: DbSettings): Settings => ({
+  layoutColumns: dbSettings.layout_columns as 1 | 2 | 3,
+  enableMasonryGrid: dbSettings.enable_masonry_grid,
+  theme: dbSettings.theme as 'light' | 'dark' | 'system',
+  displayOptions: {
+    showUrl: dbSettings.show_url,
+    showDescription: dbSettings.show_description,
+  },
+})
+
+const settingsToDbSettings = (settings: Settings): Omit<DbSettings, 'id' | 'created_at' | 'updated_at'> => ({
+  layout_columns: settings.layoutColumns,
+  enable_masonry_grid: settings.enableMasonryGrid ?? false,
+  theme: settings.theme ?? 'system',
+  show_url: settings.displayOptions?.showUrl ?? true,
+  show_description: settings.displayOptions?.showDescription ?? true,
+})
+
 // Categories
 export const getCategories = async (): Promise<Category[]> => {
   const { data, error } = await supabase
@@ -71,12 +89,18 @@ export const createCategory = async (category: Omit<Category, 'id' | 'createdAt'
 }
 
 export const updateCategory = async (id: string, updates: Partial<Category>): Promise<Category> => {
+  const updateData: any = {
+    updated_at: new Date().toISOString(),
+  }
+
+  if (updates.name !== undefined) updateData.name = updates.name
+  if (updates.color !== undefined) updateData.color = updates.color
+  if (updates.order !== undefined) updateData.order = updates.order
+  if (updates.isHidden !== undefined) updateData.is_hidden = updates.isHidden
+
   const { data, error } = await supabase
     .from('categories')
-    .update({
-      ...updates,
-      updated_at: new Date().toISOString(),
-    })
+    .update(updateData)
     .eq('id', id)
     .select()
     .single()
@@ -155,4 +179,54 @@ export const deleteBookmark = async (id: string): Promise<void> => {
 export const updateMultipleBookmarks = async (updates: { id: string; updates: Partial<Bookmark> }[]): Promise<void> => {
   const promises = updates.map(({ id, updates }) => updateBookmark(id, updates))
   await Promise.all(promises)
+}
+
+// Settings
+export const getSettings = async (): Promise<Settings | null> => {
+  const { data, error } = await supabase
+    .from('user_settings')
+    .select('*')
+    .eq('id', '00000000-0000-0000-0000-000000000001')
+    .single()
+
+  if (error) {
+    if (error.code === 'PGRST116') {
+      // No settings found
+      return null
+    }
+    throw error
+  }
+  return dbSettingsToSettings(data)
+}
+
+export const createSettings = async (settings: Settings): Promise<Settings> => {
+  const { data, error } = await supabase
+    .from('user_settings')
+    .insert({
+      id: '00000000-0000-0000-0000-000000000001', // Fixed ID for single settings record
+      ...settingsToDbSettings(settings)
+    })
+    .select()
+    .single()
+
+  if (error) throw error
+  return dbSettingsToSettings(data)
+}
+
+export const updateSettings = async (settings: Settings): Promise<Settings> => {
+  // Use UPSERT to handle both INSERT and UPDATE automatically
+  const { data, error } = await supabase
+    .from('user_settings')
+    .upsert({
+      id: '00000000-0000-0000-0000-000000000001', // Fixed ID for single settings record
+      ...settingsToDbSettings(settings),
+      updated_at: new Date().toISOString(),
+    }, {
+      onConflict: 'id'
+    })
+    .select()
+    .single()
+
+  if (error) throw error
+  return dbSettingsToSettings(data)
 }
