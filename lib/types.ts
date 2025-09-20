@@ -31,6 +31,7 @@ export interface Settings {
   displayOptions?: {
     showUrl: boolean
     showDescription: boolean
+    hiddenCategories?: string[] // netlify 빌드에러 해결 : Settings 인터페이스 내의 displayOptions 타입에 hiddenCategories 속성이 정의되어 있지 않는 문제 해결
   }
 }
 
