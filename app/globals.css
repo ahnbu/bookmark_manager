@@ -112,3 +112,11 @@
     @apply bg-background text-foreground;
   }
 }
+
+/* primary 배경 버튼에서 서브텍스트 가독성 향상 */
+@layer utilities {
+  .text-primary-subtle {
+    color: var(--primary-foreground);
+    opacity: 0.7;
+  }
+}

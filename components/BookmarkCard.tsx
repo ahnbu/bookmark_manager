@@ -309,7 +309,11 @@ export function BookmarkCard({ bookmark, onModalStateChange, dragHandleProps, de
                     {currentBookmark.name}
                   </h4>
                   {currentBookmark.description && (settings.displayOptions?.showDescription ?? true) && (
-                    <p className="text-xs text-muted-foreground mt-1 line-clamp-2">
+                    <p className={`text-xs mt-1 line-clamp-2 ${
+                      currentBookmark.isFavorite
+                        ? 'text-primary-subtle'
+                        : 'text-muted-foreground'
+                    }`}>
                       {currentBookmark.description}
                     </p>
                   )}
