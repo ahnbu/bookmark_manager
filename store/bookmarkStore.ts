@@ -98,7 +98,7 @@ export const useBookmarkStore = create<BookmarkStore>((set, get) => ({
     }
 
     // 1. 낙관적 UI 업데이트 (사용자 경험 향상을 위해 즉시 반영)
-    console.log(`🔄 북마크 ${id} 낙관적 업데이트 시작...`);
+    // console.log(`🔄 북마크 ${id} 낙관적 업데이트 시작...`);
     set((state) => ({
       bookmarks: state.bookmarks.map((bookmark) =>
         bookmark.id === id
@@ -109,7 +109,7 @@ export const useBookmarkStore = create<BookmarkStore>((set, get) => ({
 
     try {
       // 2. DB 업데이트 (await 추가로 실제 완료까지 대기)
-      console.log(`📝 북마크 ${id} DB 업데이트 중...`);
+      // console.log(`📝 북마크 ${id} DB 업데이트 중...`);
       const updatedBookmark = await dbUpdateBookmark(id, updates);
 
       // 3. DB 업데이트 성공 시 정확한 데이터로 다시 업데이트
@@ -119,7 +119,7 @@ export const useBookmarkStore = create<BookmarkStore>((set, get) => ({
         )
       }));
 
-      console.log(`✅ 북마크 ${id} 업데이트 완료`);
+      // console.log(`✅ 북마크 ${id} 업데이트 완료`);
     } catch (error) {
       console.error(`❌ 북마크 ${id} DB 업데이트 실패, UI 롤백 중:`, error);
 
@@ -368,25 +368,25 @@ export const useBookmarkStore = create<BookmarkStore>((set, get) => ({
   loadData: async () => {
     set({ isLoading: true, error: null })
     try {
-      console.log('🔄 데이터 로딩 시작...')
+      // console.log('🔄 데이터 로딩 시작...')
 
       // 개별적으로 로드하여 어느 부분에서 오류가 발생하는지 추적
       let bookmarks: Bookmark[] = []
       let categories: Category[] = []
 
       try {
-        console.log('📚 북마크 데이터 로딩 중...')
+        // console.log('📚 북마크 데이터 로딩 중...')
         bookmarks = await getBookmarks()
-        console.log(`✅ 북마크 ${bookmarks.length}개 로딩 완료`)
+        // console.log(`✅ 북마크 ${bookmarks.length}개 로딩 완료`)
 
         // 각 북마크의 데이터 무결성 검사
         bookmarks.forEach((bookmark, index) => {
           try {
             // JSON 문자열이 포함된 필드가 있다면 파싱 테스트
-            if (bookmark.title && typeof bookmark.title === 'string') {
-              // title에 특수문자나 제어문자가 있는지 확인
-              if (bookmark.title.includes('\u0000') || bookmark.title.includes('\ufffd')) {
-                console.warn(`⚠️ 북마크 ${bookmark.id}의 title에 잘못된 문자 발견:`, bookmark.title)
+            if (bookmark.name && typeof bookmark.name === 'string') {
+              // name에 특수문자나 제어문자가 있는지 확인
+              if (bookmark.name.includes('\u0000') || bookmark.name.includes('\ufffd')) {
+                console.warn(`⚠️ 북마크 ${bookmark.id}의 name에 잘못된 문자 발견:`, bookmark.name)
               }
             }
           } catch (bookmarkError) {
@@ -402,9 +402,9 @@ export const useBookmarkStore = create<BookmarkStore>((set, get) => ({
       }
 
       try {
-        console.log('📁 카테고리 데이터 로딩 중...')
+        // console.log('📁 카테고리 데이터 로딩 중...')
         categories = await getCategories()
-        console.log(`✅ 카테고리 ${categories.length}개 로딩 완료`)
+        // console.log(`✅ 카테고리 ${categories.length}개 로딩 완료`)
 
         // 각 카테고리의 데이터 무결성 검사
         categories.forEach((category, index) => {
@@ -428,14 +428,14 @@ export const useBookmarkStore = create<BookmarkStore>((set, get) => ({
       // 기본 카테고리가 없으면 생성
       let finalCategories = categories
       if (categories.length === 0) {
-        console.log('📝 기본 카테고리 생성 중...')
+        // console.log('📝 기본 카테고리 생성 중...')
         try {
           const defaultCategory = await createCategory({
             name: '기본',
             order: 0,
           })
           finalCategories = [defaultCategory]
-          console.log('✅ 기본 카테고리 생성 완료')
+          // console.log('✅ 기본 카테고리 생성 완료')
         } catch (defaultCategoryError) {
           console.error('❌ 기본 카테고리 생성 실패:', defaultCategoryError)
         }
@@ -649,7 +649,7 @@ export const useBookmarkStore = create<BookmarkStore>((set, get) => ({
           }
         }
       } else {
-        console.log('ℹ️ 마이그레이션할 favicon이 없습니다.')
+        // console.log('ℹ️ 마이그레이션할 favicon이 없습니다.')
       }
     } catch (error) {
       console.error('💥 migrateFavicons 전체 실패:', error)
@@ -707,7 +707,7 @@ export const useBookmarkStore = create<BookmarkStore>((set, get) => ({
         })
       }))
 
-      console.log(`✅ 카테고리 ${categoryId} 파비콘 새로고침 완료!`)
+      // console.log(`✅ 카테고리 ${categoryId} 파비콘 새로고침 완료!`)
     } catch (error) {
       console.error(`❌ 카테고리 ${categoryId} 파비콘 새로고침 실패:`, error)
       set({ error: '파비콘 새로고침에 실패했습니다.' })

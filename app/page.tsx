@@ -20,11 +20,11 @@ export default function Home() {
 
   useEffect(() => {
     const initializeApp = async () => {
-      console.log('🚀 앱 초기화 시작...')
+      // console.log('🚀 앱 초기화 시작...')
 
       try {
         // 필수 데이터 로딩 - 실패하면 앱이 제대로 작동하지 않음
-        console.log('📊 필수 데이터 로딩 중...')
+        // console.log('📊 필수 데이터 로딩 중...')
         await Promise.all([
           loadData().catch(dataError => {
             console.error('💥 데이터 로딩 실패:', dataError)
@@ -36,15 +36,15 @@ export default function Home() {
           })
         ])
 
-        console.log('✅ 필수 데이터 로딩 완료')
+        // console.log('✅ 필수 데이터 로딩 완료')
 
         // 부가적인 마이그레이션 작업 - 백그라운드에서 실행, 실패해도 앱 사용 가능
-        console.log('🔄 백그라운드 마이그레이션 시작...')
+        // console.log('🔄 백그라운드 마이그레이션 시작...')
 
         // 설정 마이그레이션 (비동기, 비차단)
         migrateToSupabase()
           .then(() => {
-            console.log('✅ 설정 마이그레이션 완료')
+            // console.log('✅ 설정 마이그레이션 완료')
           })
           .catch(error => {
             console.warn('⚠️ 설정 마이그레이션 실패 (무시됨):', error)
@@ -56,7 +56,7 @@ export default function Home() {
         // Favicon 마이그레이션 (비동기, 비차단)
         migrateFavicons()
           .then(() => {
-            console.log('✅ Favicon 마이그레이션 완료')
+            // console.log('✅ Favicon 마이그레이션 완료')
           })
           .catch(error => {
             console.warn('⚠️ Favicon 마이그레이션 실패 (무시됨):', error)
@@ -84,7 +84,7 @@ export default function Home() {
         })
       }
 
-      console.log('🎉 앱 초기화 프로세스 완료')
+      // console.log('🎉 앱 초기화 프로세스 완료')
     }
 
     initializeApp()
