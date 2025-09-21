@@ -566,11 +566,11 @@ export const useBookmarkStore = create<BookmarkStore>((set, get) => ({
 
   migrateFavicons: async () => {
     try {
-      console.log('🔄 Favicon 마이그레이션 시작...')
+      // console.log('🔄 Favicon 마이그레이션 시작...')
       const { bookmarks } = get()
       const bookmarksToUpdate: Array<{ id: string; favicon: string | undefined }> = []
 
-      console.log(`📊 총 ${bookmarks.length}개 북마크 검사 중...`)
+      // console.log(`📊 총 ${bookmarks.length}개 북마크 검사 중...`)
 
       // 기존 favicon URL을 가진 북마크들을 캐시 시스템으로 마이그레이션
       for (const [index, bookmark] of bookmarks.entries()) {
@@ -593,7 +593,7 @@ export const useBookmarkStore = create<BookmarkStore>((set, get) => ({
           }
 
           if (bookmark.favicon && bookmark.favicon.startsWith('http')) {
-            console.log(`🔄 북마크 ${bookmark.id} favicon 마이그레이션 중... (${index + 1}/${bookmarks.length})`)
+            // console.log(`🔄 북마크 ${bookmark.id} favicon 마이그레이션 중... (${index + 1}/${bookmarks.length})`)
             try {
               // 기존 URL 방식의 favicon을 캐시 시스템으로 변환
               const cachedFavicon = await loadFaviconWithCache(bookmark.url)
@@ -601,7 +601,7 @@ export const useBookmarkStore = create<BookmarkStore>((set, get) => ({
                 id: bookmark.id,
                 favicon: cachedFavicon || undefined
               })
-              console.log(`✅ 북마크 ${bookmark.id} favicon 마이그레이션 성공`)
+              // console.log(`✅ 북마크 ${bookmark.id} favicon 마이그레이션 성공`)
             } catch (faviconError) {
               console.warn(`⚠️ 북마크 ${bookmark.id} favicon 마이그레이션 실패:`, faviconError)
               // 실패한 경우 undefined로 설정
@@ -625,7 +625,7 @@ export const useBookmarkStore = create<BookmarkStore>((set, get) => ({
 
       // 업데이트가 필요한 북마크들을 일괄 업데이트
       if (bookmarksToUpdate.length > 0) {
-        console.log(`📝 ${bookmarksToUpdate.length}개 북마크 일괄 업데이트 중...`)
+        // console.log(`📝 ${bookmarksToUpdate.length}개 북마크 일괄 업데이트 중...`)
         try {
           const updates = bookmarksToUpdate.map(({ id, favicon }) => ({
             id,
@@ -641,7 +641,7 @@ export const useBookmarkStore = create<BookmarkStore>((set, get) => ({
             })
           }))
 
-          console.log(`✅ Favicon 마이그레이션 완료 - ${bookmarksToUpdate.length}개 업데이트됨`)
+          // console.log(`✅ Favicon 마이그레이션 완료 - ${bookmarksToUpdate.length}개 업데이트됨`)
         } catch (updateError) {
           console.error('❌ 북마크 일괄 업데이트 실패:', updateError)
           if (updateError instanceof SyntaxError) {
@@ -672,13 +672,13 @@ export const useBookmarkStore = create<BookmarkStore>((set, get) => ({
       return
     }
 
-    console.log(`🔄 카테고리 ${categoryId}의 파비콘 ${targetBookmarks.length}개 새로고침 시작...`)
+    // console.log(`🔄 카테고리 ${categoryId}의 파비콘 ${targetBookmarks.length}개 새로고침 시작...`)
 
     try {
       // 각 북마크에 대해 강제 새로고침 실행
       const refreshPromises = targetBookmarks.map(async (bookmark) => {
         try {
-          console.log(`🔄 북마크 ${bookmark.name} 파비콘 새로고침 중...`)
+          // console.log(`🔄 북마크 ${bookmark.name} 파비콘 새로고침 중...`)
           const newFavicon = await forceRefreshFavicon(bookmark.url)
           return {
             id: bookmark.id,
@@ -696,7 +696,7 @@ export const useBookmarkStore = create<BookmarkStore>((set, get) => ({
       const updates = await Promise.all(refreshPromises)
 
       // DB에 일괄 업데이트
-      console.log(`📝 ${updates.length}개 북마크 파비콘 DB 업데이트 중...`)
+      // console.log(`📝 ${updates.length}개 북마크 파비콘 DB 업데이트 중...`)
       await updateMultipleBookmarks(updates)
 
       // Zustand 상태 업데이트 (UI 리렌더링 트리거)
