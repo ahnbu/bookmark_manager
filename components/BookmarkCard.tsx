@@ -263,19 +263,19 @@ export function BookmarkCard({ bookmark, onModalStateChange, dragHandleProps, de
       )}
 
       <Card className={`group hover:shadow-md transition-shadow cursor-pointer ${currentBookmark.isFavorite ? 'bg-favorite text-favorite-foreground' : ''}`}>
-        <CardContent className="p-4 sm:p-3">
-          <div className="flex items-start gap-3">
+        <CardContent className="p-3">
+          <div className="flex items-start gap-2 sm:gap-3">
             {/* Drag Handle - Mobile only */}
             <div
-              className="flex-shrink-0 sm:hidden opacity-50 active:opacity-100 transition-opacity cursor-grab active:cursor-grabbing p-2 -ml-2 -my-1"
+              className="flex-shrink-0 sm:hidden opacity-30 group-hover:opacity-70 transition-opacity cursor-grab active:cursor-grabbing p-1 -ml-1"
               {...dragHandleProps}
               title="드래그하여 순서 변경"
             >
-              <GripVertical className="w-5 h-5 text-muted-foreground" />
+              <GripVertical className="w-4 h-4 text-muted-foreground" />
             </div>
 
             {/* Favicon */}
-            <div className="w-4 h-4 mt-1 flex-shrink-0">
+            <div className="w-4 h-4 mt-1 flex-shrink-0 pointer-events-none">
               {currentBookmark.isBlacklisted ? (
                 <Globe className="w-4 h-4 text-muted-foreground" />
               ) : currentBookmark.customFavicon ? (
@@ -303,9 +303,13 @@ export function BookmarkCard({ bookmark, onModalStateChange, dragHandleProps, de
               onClick={handleOpenUrl}
               {...(desktopDragProps ? desktopDragProps : {})}
             >
-              <div className="flex items-start justify-between gap-2">
+              <div className={`flex justify-between gap-2 ${
+                currentBookmark.description && (settings.displayOptions?.showDescription ?? true)
+                  ? 'items-start'
+                  : 'items-center'
+              }`}>
                 <div className="flex-1 min-w-0">
-                  <h4 className="font-medium text-base sm:text-sm truncate">
+                  <h4 className="font-medium text-sm truncate">
                     {currentBookmark.name}
                   </h4>
                   {currentBookmark.description && (settings.displayOptions?.showDescription ?? true) && (
@@ -326,15 +330,10 @@ export function BookmarkCard({ bookmark, onModalStateChange, dragHandleProps, de
                       {currentBookmark.url}
                     </p>
                   )}
-                  {/* {(settings.displayOptions?.showUrl ?? true) && (
-                    <p className="text-xs text-muted-foreground mt-1 truncate">
-                      {currentBookmark.url}
-                    </p>
-                  )} */}
                 </div>
 
                 {/* Actions */}
-                <div className="flex items-center gap-2 sm:gap-1 opacity-60 sm:opacity-0 sm:group-hover:opacity-100 group-active:opacity-100 transition-opacity">
+                <div className="flex items-center gap-1 opacity-60 sm:opacity-0 sm:group-hover:opacity-100 group-active:opacity-100 transition-opacity">
                   {/* URL 수정해도 문제가 생겼던 과거 코드
                   <Button
                     size="sm"
@@ -351,24 +350,24 @@ export function BookmarkCard({ bookmark, onModalStateChange, dragHandleProps, de
                   <Button
                     size="sm"
                     variant="ghost"
-                    className="h-8 w-8 sm:h-6 sm:w-6 p-0"
+                    className="h-6 w-6 p-0"
                     onClick={(e) => {
                       e.stopPropagation()
                       setIsEditing(true)
                     }}
                     title="북마크 수정"
                   >
-                    <Edit2 className="h-4 w-4 sm:h-3 sm:w-3" />
+                    <Edit2 className="h-3 w-3" />
                   </Button>
                   <DropdownMenu>
                     <DropdownMenuTrigger asChild>
                       <Button
                         size="sm"
                         variant="ghost"
-                        className="h-8 w-8 sm:h-6 sm:w-6 p-0"
+                        className="h-6 w-6 p-0"
                         onClick={(e) => e.stopPropagation()}
                       >
-                        <MoreVertical className="h-4 w-4 sm:h-3 sm:w-3" />
+                        <MoreVertical className="h-3 w-3" />
                       </Button>
                     </DropdownMenuTrigger>
 
