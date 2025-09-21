@@ -27,6 +27,23 @@
 - **파비콘 리셋**: 문제가 있는 파비콘을 기본 아이콘으로 변경
 - **지능형 캐싱**: 성능 최적화를 위한 파비콘 캐시 시스템
 
+#### 파비콘 처리 순서 (Favicon Loading Process)
+1. **DB 확인**: Supabase DB의 `bookmarks.favicon` 필드에서 저장된 base64 데이터 확인
+2. **LocalStorage 캐시 확인**: 네트워크 요청 최적화를 위한 임시 캐시 확인
+3. **Google API + 프록시**: CORS 우회를 위한 프록시를 통해 Google Favicon API 호출
+4. **Direct Favicon 폴백**: 프록시 실패 시 직접 favicon 경로 시도
+   - `/favicon.ico`, `/favicon.png`, `/apple-touch-icon.png` 등
+5. **성공 시 저장**:
+   - Supabase DB에 base64 데이터로 저장 (영구 보관)
+   - LocalStorage에 캐시 저장 (중복 요청 방지)
+6. **실패 시 Globe 아이콘**: 모든 시도 실패 시 기본 Globe 아이콘 표시
+
+#### 캐시 시스템 구조
+- **DB 저장**: 실제 데이터, 영구 저장
+- **LocalStorage 캐시**: 30일 TTL, 네트워크 최적화용, 최대 2MB
+- **실패 도메인 관리**: 1시간 쿨다운으로 반복 요청 방지
+- **자동 정리**: 만료된 캐시 및 용량 초과 시 LRU 방식으로 자동 정리
+
 ### ⚙️ 설정 및 커스터마이징
 - **레이아웃 옵션**: 1컬럼, 2컬럼, 3컬럼 그리드 레이아웃
 - **표시 옵션**: URL, 설명 표시/숨김 설정
@@ -46,7 +63,7 @@
 - **상태 관리**: Zustand
 - **드래그 앤 드롭**: @dnd-kit
 - **아이콘**: Lucide React
-- **데이터 저장**: LocalStorage
+- **데이터 저장**: Supabase (PostgreSQL) + LocalStorage 캐시
 
 ## 🚀 시작하기
 
@@ -102,7 +119,8 @@ npm start
 ### 성능
 - **지능형 파비콘 캐싱**: 중복 로딩 방지 및 성능 최적화
 - **순차적 파비콘 로딩**: 초기 로딩 시 서버 부하 분산
-- **로컬 저장소**: 빠른 데이터 액세스
+- **하이브리드 저장소**: Supabase DB + LocalStorage 캐시로 빠른 액세스
+- **실패 도메인 관리**: 쿨다운을 통한 불필요한 재시도 방지
 
 ### 확장성
 - **모듈형 아키텍처**: 컴포넌트 기반 설계

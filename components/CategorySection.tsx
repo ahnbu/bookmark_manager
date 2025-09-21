@@ -13,15 +13,21 @@ import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigge
 import { Plus, Edit2, Trash2, MoreVertical, RefreshCw, Copy, Eye, EyeOff } from 'lucide-react'
 import { DraggableBookmarkCard } from './DraggableBookmarkCard'
 import { HiddenBookmarksModal } from './HiddenBookmarksModal'
-import { forceRefreshFavicon } from '@/lib/faviconCache'
-import { AddBookmark } from './AddBookmark' // ✅ 이 라인을 추가하세요.
+import { AddBookmark } from './AddBookmark'
 
 interface CategorySectionProps {
   category: Category
 }
 
 export function CategorySection({ category }: CategorySectionProps) {
-  const { getBookmarksByCategory, updateCategory, deleteCategory, duplicateCategory, toggleCategoryVisibility } = useBookmarkStore()
+  const {
+    getBookmarksByCategory,
+    updateCategory,
+    deleteCategory,
+    duplicateCategory,
+    toggleCategoryVisibility,
+    refreshFaviconsForCategory
+  } = useBookmarkStore()
   const bookmarks = getBookmarksByCategory(category.id)
 
   const [isEditing, setIsEditing] = useState(false)
@@ -61,15 +67,8 @@ export function CategorySection({ category }: CategorySectionProps) {
   const handleRefreshFavicons = async () => {
     setIsRefreshing(true)
     try {
-      // 카테고리 내 모든 북마크의 favicon 강제 새로고침
-      const refreshPromises = bookmarks.map(bookmark =>
-        forceRefreshFavicon(bookmark.url)
-      )
-
-      await Promise.allSettled(refreshPromises)
-
-      // 페이지 새로고침으로 UI 업데이트
-      window.location.reload()
+      // store의 새로운 액션을 사용하여 카테고리별 favicon 새로고침
+      await refreshFaviconsForCategory(category.id)
     } catch (error) {
       console.error('Favicon refresh failed:', error)
     } finally {
@@ -139,7 +138,7 @@ export function CategorySection({ category }: CategorySectionProps) {
                     </DropdownMenuItem>
                     <DropdownMenuItem onClick={() => setIsHiddenModalOpen(true)}>
                       <Eye className="h-4 w-4 mr-2" />
-                      숨기기 관리
+                      북마크 숨기기 관리
                     </DropdownMenuItem>
                     <DropdownMenuItem onClick={async () => {
                       try {

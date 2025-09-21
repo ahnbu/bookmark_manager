@@ -154,6 +154,57 @@ async function imageToBase64(url: string): Promise<string> {
   })
 }
 
+// 더미/테스트 도메인 체크
+function isDummyDomain(domain: string): boolean {
+  const dummyDomains = [
+    'example.com', 'example.org', 'example.net',
+    'localhost', '127.0.0.1', '0.0.0.0',
+    'test.com', 'demo.com', 'sample.com',
+    'dummy.com', 'fake.com', 'placeholder.com'
+  ]
+  return dummyDomains.includes(domain.toLowerCase())
+}
+
+// Direct favicon 시도 (일반적인 favicon 경로들)
+async function tryDirectFavicon(domain: string): Promise<string | null> {
+  // 더미 도메인인 경우 시도하지 않음
+  if (isDummyDomain(domain)) {
+    console.log(`ℹ️ ${domain}은 더미/테스트 도메인이므로 Direct favicon 시도를 건너뜁니다.`)
+    return null
+  }
+
+  const commonFaviconPaths = [
+    '/favicon.ico',
+    '/favicon.png',
+    '/apple-touch-icon.png',
+    '/apple-touch-icon-152x152.png',
+    '/apple-touch-icon-180x180.png',
+    '/android-chrome-192x192.png'
+  ]
+
+  for (const path of commonFaviconPaths) {
+    try {
+      const faviconUrl = `https://${domain}${path}`
+      console.log(`🔍 ${domain} Direct favicon 시도중...`)
+
+      const base64 = await imageToBase64(faviconUrl)
+      console.log(`✅ ${domain} Direct favicon 성공`)
+      return base64
+    } catch (error) {
+      // CORS 에러는 로그 레벨을 낮춤 (예상되는 에러)
+      if (error instanceof Error && error.message.includes('CORS')) {
+        console.debug(`⚠️ ${domain}${path} CORS 제한`)
+      } else {
+        console.log(`❌ ${domain}${path} 실패: ${error instanceof Error ? error.message : 'Unknown error'}`)
+      }
+      continue
+    }
+  }
+
+  console.log(`⚠️ ${domain} Direct favicon 시도 완료 (성공하지 못함)`)
+  return null
+}
+
 // 캐시에서 favicon 조회
 export function getFaviconFromCache(domain: string): string | null {
   cleanExpiredCache()
@@ -208,13 +259,14 @@ export async function loadFaviconWithCache(url: string): Promise<string | null> 
       return null;
     }
 
-    // 3. 네트워크에서 로딩 시도 (CORS 프록시 사용으로 변경)
+    // 3. Google API + 프록시 시도
     try {
       const googleApiUrl = `https://www.google.com/s2/favicons?sz=64&domain=${domain}`;
       // allorigins 프록시를 통해 요청합니다. 대상 URL은 반드시 인코딩해야 합니다.
       const proxiedUrl = `https://favicon-proxy.byungwook-an.workers.dev/?url=${encodeURIComponent(googleApiUrl)}`;
-      
-      const response = await fetch(proxiedUrl); // 이제 CORS 에러가 발생하지 않습니다.
+
+      console.log(`🔄 ${domain} Google API + 프록시 시도중...`);
+      const response = await fetch(proxiedUrl);
       if (!response.ok) {
         throw new Error('Proxied Google API failed');
       }
@@ -226,16 +278,36 @@ export async function loadFaviconWithCache(url: string): Promise<string | null> 
         throw new Error('Favicon too large');
       }
 
+      console.log(`✅ ${domain} Google API + 프록시 성공`);
       saveFaviconToCache(domain, base64);
       return base64;
 
-    } catch (error) {
-      const failed = getFailedDomains();
-      failed[domain] = Date.now();
-      saveFailedDomains(failed);
-      
-      console.error(`Failed to load favicon for ${domain}:`, error);
-      return null;
+    } catch (proxyError) {
+      console.warn(`⚠️ Google API + 프록시 실패: ${domain} - ${proxyError instanceof Error ? proxyError.message : 'Unknown error'}`);
+
+      // 4. Direct favicon 시도 (프록시 실패 시 폴백)
+      try {
+        console.log(`🔄 ${domain} Direct favicon 폴백 시도중...`);
+        const directFavicon = await tryDirectFavicon(domain);
+
+        if (directFavicon) {
+          console.log(`✅ ${domain} Direct favicon 폴백 성공`);
+          saveFaviconToCache(domain, directFavicon);
+          return directFavicon;
+        } else {
+          throw new Error('Direct favicon failed');
+        }
+      } catch (directError) {
+        console.debug(`⚠️ ${domain} Direct favicon 폴백 실패`);
+
+        // 5. 모든 시도 실패 - 실패 도메인 등록
+        const failed = getFailedDomains();
+        failed[domain] = Date.now();
+        saveFailedDomains(failed);
+
+        console.log(`ℹ️ ${domain} favicon 로딩 실패 - 기본 아이콘 사용`);
+        return null;
+      }
     }
   } catch {
     return null;
@@ -258,10 +330,12 @@ export async function forceRefreshFavicon(url: string): Promise<string | null> {
     const urlObj = new URL(url);
     const domain = urlObj.hostname;
     
+    // Google API + 프록시 시도
     try {
       const googleApiUrl = `https://www.google.com/s2/favicons?sz=64&domain=${domain}`;
       const proxiedUrl = `https://favicon-proxy.byungwook-an.workers.dev/?url=${encodeURIComponent(googleApiUrl)}`;
-      
+
+      console.log(`🔄 ${domain} 강제 새로고침 - Google API + 프록시 시도중...`);
       const response = await fetch(proxiedUrl);
       if (!response.ok) {
         throw new Error('Proxied Google API failed');
@@ -274,8 +348,10 @@ export async function forceRefreshFavicon(url: string): Promise<string | null> {
         throw new Error('Favicon too large');
       }
 
+      console.log(`✅ ${domain} 강제 새로고침 - Google API + 프록시 성공`);
       saveFaviconToCache(domain, base64);
 
+      // 실패 기록 삭제 (성공했으므로)
       const failedDomains = getFailedDomains();
       if (failedDomains[domain]) {
         delete failedDomains[domain];
@@ -283,9 +359,33 @@ export async function forceRefreshFavicon(url: string): Promise<string | null> {
       }
 
       return base64;
-    } catch (error) {
-      console.error(`Failed to force refresh favicon for ${domain}:`, error);
-      return null;
+    } catch (proxyError) {
+      console.warn(`⚠️ 강제 새로고침 - Google API + 프록시 실패: ${domain} - ${proxyError instanceof Error ? proxyError.message : 'Unknown error'}`);
+
+      // Direct favicon 시도 (프록시 실패 시 폴백)
+      try {
+        console.log(`🔄 ${domain} 강제 새로고침 - Direct favicon 폴백 시도중...`);
+        const directFavicon = await tryDirectFavicon(domain);
+
+        if (directFavicon) {
+          console.log(`✅ ${domain} 강제 새로고침 - Direct favicon 폴백 성공`);
+          saveFaviconToCache(domain, directFavicon);
+
+          // 실패 기록 삭제 (성공했으므로)
+          const failedDomains = getFailedDomains();
+          if (failedDomains[domain]) {
+            delete failedDomains[domain];
+            saveFailedDomains(failedDomains);
+          }
+
+          return directFavicon;
+        } else {
+          throw new Error('Direct favicon failed');
+        }
+      } catch (directError) {
+        console.log(`ℹ️ ${domain} 강제 새로고침 실패 - 기본 아이콘 사용`);
+        return null;
+      }
     }
   } catch {
     return null;

@@ -1,7 +1,7 @@
 import { create } from 'zustand'
 import { Bookmark, Category } from '@/lib/types'
 import { storage } from '@/lib/storage'
-import { loadFaviconWithCache } from '@/lib/faviconCache'
+import { loadFaviconWithCache, forceRefreshFavicon } from '@/lib/faviconCache'
 import {
   getBookmarks,
   getCategories,
@@ -44,6 +44,9 @@ interface BookmarkStore {
   migrateFromLocalStorage: () => Promise<void>
   migrateFavicons: () => Promise<void>
 
+  // Favicon management
+  refreshFaviconsForCategory: (categoryId: string) => Promise<void>
+
   // Utilities
   getBookmarksByCategory: (categoryId: string) => Bookmark[]
   getHiddenBookmarksByCategory: (categoryId: string) => Bookmark[]
@@ -84,26 +87,58 @@ export const useBookmarkStore = create<BookmarkStore>((set, get) => ({
   //   }
   // },
 
-  // bookmarkStore.ts의 수정된 updateBookmark 함수
-
   updateBookmark: async (id, updates) => {
-    try {
-      // 1. DB에 업데이트 요청 (이 줄은 여전히 존재하며, 가장 먼저 실행됩니다!)
-      dbUpdateBookmark(id, updates);
+    const originalBookmarks = get().bookmarks;
+    const originalBookmark = originalBookmarks.find(b => b.id === id);
 
-      // 2. 위 DB 요청이 완료되기를 기다리지 않고,
-      //    일단 성공할 것이라고 "낙관적"으로 가정하고 UI(클라이언트 상태)를 즉시 업데이트합니다.
+    if (!originalBookmark) {
+      console.error('❌ 북마크를 찾을 수 없습니다:', id);
+      set({ error: '업데이트할 북마크를 찾을 수 없습니다.' });
+      return;
+    }
+
+    // 1. 낙관적 UI 업데이트 (사용자 경험 향상을 위해 즉시 반영)
+    console.log(`🔄 북마크 ${id} 낙관적 업데이트 시작...`);
+    set((state) => ({
+      bookmarks: state.bookmarks.map((bookmark) =>
+        bookmark.id === id
+          ? { ...bookmark, ...updates }
+          : bookmark
+      )
+    }));
+
+    try {
+      // 2. DB 업데이트 (await 추가로 실제 완료까지 대기)
+      console.log(`📝 북마크 ${id} DB 업데이트 중...`);
+      const updatedBookmark = await dbUpdateBookmark(id, updates);
+
+      // 3. DB 업데이트 성공 시 정확한 데이터로 다시 업데이트
       set((state) => ({
         bookmarks: state.bookmarks.map((bookmark) =>
-          bookmark.id === id
-            ? { ...bookmark, ...updates }
-            : bookmark
+          bookmark.id === id ? updatedBookmark : bookmark
         )
       }));
+
+      console.log(`✅ 북마크 ${id} 업데이트 완료`);
     } catch (error) {
-      console.error('Failed to update bookmark:', error);
-      // 3. 만약 1번의 DB 업데이트 요청이 실패하면 여기서 에러를 잡습니다.
-      set({ error: '북마크 수정에 실패했습니다.' });
+      console.error(`❌ 북마크 ${id} DB 업데이트 실패, UI 롤백 중:`, error);
+
+      // 4. 실패 시 원래 상태로 롤백
+      set({
+        bookmarks: originalBookmarks,
+        error: '북마크 수정에 실패했습니다. 변경사항이 취소되었습니다.'
+      });
+
+      // SyntaxError 특별 처리
+      if (error instanceof SyntaxError) {
+        console.error('📍 북마크 업데이트 중 SyntaxError 발생:', {
+          bookmarkId: id,
+          updates: updates,
+          error: error.message,
+          stack: error.stack
+        });
+        set({ error: '데이터 형식 오류로 북마크 수정에 실패했습니다.' });
+      }
     }
   },
 
@@ -333,20 +368,80 @@ export const useBookmarkStore = create<BookmarkStore>((set, get) => ({
   loadData: async () => {
     set({ isLoading: true, error: null })
     try {
-      const [bookmarks, categories] = await Promise.all([
-        getBookmarks(),
-        getCategories()
-      ])
+      console.log('🔄 데이터 로딩 시작...')
+
+      // 개별적으로 로드하여 어느 부분에서 오류가 발생하는지 추적
+      let bookmarks: Bookmark[] = []
+      let categories: Category[] = []
+
+      try {
+        console.log('📚 북마크 데이터 로딩 중...')
+        bookmarks = await getBookmarks()
+        console.log(`✅ 북마크 ${bookmarks.length}개 로딩 완료`)
+
+        // 각 북마크의 데이터 무결성 검사
+        bookmarks.forEach((bookmark, index) => {
+          try {
+            // JSON 문자열이 포함된 필드가 있다면 파싱 테스트
+            if (bookmark.title && typeof bookmark.title === 'string') {
+              // title에 특수문자나 제어문자가 있는지 확인
+              if (bookmark.title.includes('\u0000') || bookmark.title.includes('\ufffd')) {
+                console.warn(`⚠️ 북마크 ${bookmark.id}의 title에 잘못된 문자 발견:`, bookmark.title)
+              }
+            }
+          } catch (bookmarkError) {
+            console.error(`❌ 북마크 ${bookmark.id} (인덱스: ${index}) 데이터 검증 실패:`, bookmarkError, bookmark)
+          }
+        })
+      } catch (bookmarkError) {
+        console.error('❌ 북마크 로딩 실패:', bookmarkError)
+        if (bookmarkError instanceof SyntaxError) {
+          console.error('📍 북마크 데이터에서 SyntaxError 발생. 손상된 JSON 데이터가 있을 수 있습니다.')
+        }
+        // 북마크 로딩이 실패해도 카테고리는 로드 시도
+      }
+
+      try {
+        console.log('📁 카테고리 데이터 로딩 중...')
+        categories = await getCategories()
+        console.log(`✅ 카테고리 ${categories.length}개 로딩 완료`)
+
+        // 각 카테고리의 데이터 무결성 검사
+        categories.forEach((category, index) => {
+          try {
+            if (category.name && typeof category.name === 'string') {
+              if (category.name.includes('\u0000') || category.name.includes('\ufffd')) {
+                console.warn(`⚠️ 카테고리 ${category.id}의 name에 잘못된 문자 발견:`, category.name)
+              }
+            }
+          } catch (categoryError) {
+            console.error(`❌ 카테고리 ${category.id} (인덱스: ${index}) 데이터 검증 실패:`, categoryError, category)
+          }
+        })
+      } catch (categoryError) {
+        console.error('❌ 카테고리 로딩 실패:', categoryError)
+        if (categoryError instanceof SyntaxError) {
+          console.error('📍 카테고리 데이터에서 SyntaxError 발생. 손상된 JSON 데이터가 있을 수 있습니다.')
+        }
+      }
 
       // 기본 카테고리가 없으면 생성
       let finalCategories = categories
       if (categories.length === 0) {
-        const defaultCategory = await createCategory({
-          name: '기본',
-          order: 0,
-        })
-        finalCategories = [defaultCategory]
+        console.log('📝 기본 카테고리 생성 중...')
+        try {
+          const defaultCategory = await createCategory({
+            name: '기본',
+            order: 0,
+          })
+          finalCategories = [defaultCategory]
+          console.log('✅ 기본 카테고리 생성 완료')
+        } catch (defaultCategoryError) {
+          console.error('❌ 기본 카테고리 생성 실패:', defaultCategoryError)
+        }
       }
+
+      console.log(`🎉 데이터 로딩 완료 - 북마크: ${bookmarks.length}, 카테고리: ${finalCategories.length}`)
 
       set({
         bookmarks,
@@ -354,8 +449,15 @@ export const useBookmarkStore = create<BookmarkStore>((set, get) => ({
         isLoading: false
       })
     } catch (error) {
-      console.error('Failed to load data:', error)
-      set({ error: '데이터 로딩 중 오류가 발생했습니다.', isLoading: false })
+      console.error('💥 loadData 전체 실패:', error)
+      if (error instanceof SyntaxError) {
+        console.error('📍 SyntaxError 상세 정보:', {
+          message: error.message,
+          stack: error.stack,
+          name: error.name
+        })
+      }
+      set({ error: '데이터 로딩 중 심각한 오류가 발생했습니다. 브라우저 개발자 도구 콘솔을 확인해주세요.', isLoading: false })
     }
   },
 
@@ -464,24 +566,58 @@ export const useBookmarkStore = create<BookmarkStore>((set, get) => ({
 
   migrateFavicons: async () => {
     try {
+      console.log('🔄 Favicon 마이그레이션 시작...')
       const { bookmarks } = get()
       const bookmarksToUpdate: Array<{ id: string; favicon: string | undefined }> = []
 
+      console.log(`📊 총 ${bookmarks.length}개 북마크 검사 중...`)
+
       // 기존 favicon URL을 가진 북마크들을 캐시 시스템으로 마이그레이션
-      for (const bookmark of bookmarks) {
-        if (bookmark.favicon && bookmark.favicon.startsWith('http')) {
-          try {
-            // 기존 URL 방식의 favicon을 캐시 시스템으로 변환
-            const cachedFavicon = await loadFaviconWithCache(bookmark.url)
-            bookmarksToUpdate.push({
-              id: bookmark.id,
-              favicon: cachedFavicon || undefined
-            })
-          } catch {
-            // 실패한 경우 undefined로 설정
-            bookmarksToUpdate.push({
-              id: bookmark.id,
-              favicon: undefined
+      for (const [index, bookmark] of bookmarks.entries()) {
+        try {
+          // 북마크 데이터 무결성 검사
+          if (!bookmark.id || typeof bookmark.id !== 'string') {
+            console.warn(`⚠️ 북마크 인덱스 ${index}에 잘못된 ID:`, bookmark)
+            continue
+          }
+
+          if (!bookmark.url || typeof bookmark.url !== 'string') {
+            console.warn(`⚠️ 북마크 ${bookmark.id}에 잘못된 URL:`, bookmark.url)
+            continue
+          }
+
+          // URL에 특수문자나 제어문자가 있는지 확인
+          if (bookmark.url.includes('\u0000') || bookmark.url.includes('\ufffd')) {
+            console.warn(`⚠️ 북마크 ${bookmark.id}의 URL에 잘못된 문자 발견:`, bookmark.url)
+            continue
+          }
+
+          if (bookmark.favicon && bookmark.favicon.startsWith('http')) {
+            console.log(`🔄 북마크 ${bookmark.id} favicon 마이그레이션 중... (${index + 1}/${bookmarks.length})`)
+            try {
+              // 기존 URL 방식의 favicon을 캐시 시스템으로 변환
+              const cachedFavicon = await loadFaviconWithCache(bookmark.url)
+              bookmarksToUpdate.push({
+                id: bookmark.id,
+                favicon: cachedFavicon || undefined
+              })
+              console.log(`✅ 북마크 ${bookmark.id} favicon 마이그레이션 성공`)
+            } catch (faviconError) {
+              console.warn(`⚠️ 북마크 ${bookmark.id} favicon 마이그레이션 실패:`, faviconError)
+              // 실패한 경우 undefined로 설정
+              bookmarksToUpdate.push({
+                id: bookmark.id,
+                favicon: undefined
+              })
+            }
+          }
+        } catch (bookmarkProcessError) {
+          console.error(`❌ 북마크 ${bookmark?.id || index} 처리 중 오류:`, bookmarkProcessError, bookmark)
+          if (bookmarkProcessError instanceof SyntaxError) {
+            console.error('📍 북마크 처리 중 SyntaxError 발생:', {
+              bookmarkId: bookmark?.id,
+              error: bookmarkProcessError.message,
+              bookmark: bookmark
             })
           }
         }
@@ -489,22 +625,100 @@ export const useBookmarkStore = create<BookmarkStore>((set, get) => ({
 
       // 업데이트가 필요한 북마크들을 일괄 업데이트
       if (bookmarksToUpdate.length > 0) {
-        const updates = bookmarksToUpdate.map(({ id, favicon }) => ({
-          id,
-          updates: { favicon }
-        }))
+        console.log(`📝 ${bookmarksToUpdate.length}개 북마크 일괄 업데이트 중...`)
+        try {
+          const updates = bookmarksToUpdate.map(({ id, favicon }) => ({
+            id,
+            updates: { favicon }
+          }))
 
-        await updateMultipleBookmarks(updates)
+          await updateMultipleBookmarks(updates)
 
-        set((state) => ({
-          bookmarks: state.bookmarks.map((bookmark) => {
-            const update = bookmarksToUpdate.find(u => u.id === bookmark.id)
-            return update ? { ...bookmark, favicon: update.favicon } : bookmark
-          })
-        }))
+          set((state) => ({
+            bookmarks: state.bookmarks.map((bookmark) => {
+              const update = bookmarksToUpdate.find(u => u.id === bookmark.id)
+              return update ? { ...bookmark, favicon: update.favicon } : bookmark
+            })
+          }))
+
+          console.log(`✅ Favicon 마이그레이션 완료 - ${bookmarksToUpdate.length}개 업데이트됨`)
+        } catch (updateError) {
+          console.error('❌ 북마크 일괄 업데이트 실패:', updateError)
+          if (updateError instanceof SyntaxError) {
+            console.error('📍 북마크 업데이트 중 SyntaxError 발생:', updateError.message)
+          }
+        }
+      } else {
+        console.log('ℹ️ 마이그레이션할 favicon이 없습니다.')
       }
     } catch (error) {
-      console.error('Failed to migrate favicons:', error)
+      console.error('💥 migrateFavicons 전체 실패:', error)
+      if (error instanceof SyntaxError) {
+        console.error('📍 SyntaxError 상세 정보:', {
+          message: error.message,
+          stack: error.stack,
+          name: error.name
+        })
+      }
+    }
+  },
+
+  refreshFaviconsForCategory: async (categoryId: string) => {
+    const { getBookmarksByCategory } = get()
+    const targetBookmarks = getBookmarksByCategory(categoryId)
+
+    if (targetBookmarks.length === 0) {
+      console.log(`ℹ️ 카테고리 ${categoryId}에 새로고침할 북마크가 없습니다.`)
+      return
+    }
+
+    console.log(`🔄 카테고리 ${categoryId}의 파비콘 ${targetBookmarks.length}개 새로고침 시작...`)
+
+    try {
+      // 각 북마크에 대해 강제 새로고침 실행
+      const refreshPromises = targetBookmarks.map(async (bookmark) => {
+        try {
+          console.log(`🔄 북마크 ${bookmark.name} 파비콘 새로고침 중...`)
+          const newFavicon = await forceRefreshFavicon(bookmark.url)
+          return {
+            id: bookmark.id,
+            updates: { favicon: newFavicon || undefined }
+          }
+        } catch (error) {
+          console.warn(`⚠️ 북마크 ${bookmark.name} 파비콘 새로고침 실패:`, error)
+          return {
+            id: bookmark.id,
+            updates: { favicon: undefined }
+          }
+        }
+      })
+
+      const updates = await Promise.all(refreshPromises)
+
+      // DB에 일괄 업데이트
+      console.log(`📝 ${updates.length}개 북마크 파비콘 DB 업데이트 중...`)
+      await updateMultipleBookmarks(updates)
+
+      // Zustand 상태 업데이트 (UI 리렌더링 트리거)
+      set((state) => ({
+        bookmarks: state.bookmarks.map((bookmark) => {
+          const update = updates.find(u => u.id === bookmark.id)
+          return update ? { ...bookmark, ...update.updates } : bookmark
+        })
+      }))
+
+      console.log(`✅ 카테고리 ${categoryId} 파비콘 새로고침 완료!`)
+    } catch (error) {
+      console.error(`❌ 카테고리 ${categoryId} 파비콘 새로고침 실패:`, error)
+      set({ error: '파비콘 새로고침에 실패했습니다.' })
+
+      if (error instanceof SyntaxError) {
+        console.error('📍 파비콘 새로고침 중 SyntaxError 발생:', {
+          categoryId: categoryId,
+          error: error.message,
+          stack: error.stack
+        })
+      }
     }
   },
 

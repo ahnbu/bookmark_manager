@@ -20,22 +20,71 @@ export default function Home() {
 
   useEffect(() => {
     const initializeApp = async () => {
-      await loadData()
-      await loadSettings()
+      console.log('🚀 앱 초기화 시작...')
 
-      // 설정 마이그레이션 (백그라운드에서 실행)
       try {
-        await migrateToSupabase()
-      } catch (error) {
-        console.warn('Settings migration failed:', error)
+        // 필수 데이터 로딩 - 실패하면 앱이 제대로 작동하지 않음
+        console.log('📊 필수 데이터 로딩 중...')
+        await Promise.all([
+          loadData().catch(dataError => {
+            console.error('💥 데이터 로딩 실패:', dataError)
+            throw new Error(`데이터 로딩 실패: ${dataError.message}`)
+          }),
+          loadSettings().catch(settingsError => {
+            console.warn('⚠️ 설정 로딩 실패, 기본값 사용:', settingsError)
+            // 설정 로딩 실패는 치명적이지 않음 (기본값 사용 가능)
+          })
+        ])
+
+        console.log('✅ 필수 데이터 로딩 완료')
+
+        // 부가적인 마이그레이션 작업 - 백그라운드에서 실행, 실패해도 앱 사용 가능
+        console.log('🔄 백그라운드 마이그레이션 시작...')
+
+        // 설정 마이그레이션 (비동기, 비차단)
+        migrateToSupabase()
+          .then(() => {
+            console.log('✅ 설정 마이그레이션 완료')
+          })
+          .catch(error => {
+            console.warn('⚠️ 설정 마이그레이션 실패 (무시됨):', error)
+            if (error instanceof SyntaxError) {
+              console.error('📍 설정 마이그레이션 중 SyntaxError:', error.message)
+            }
+          })
+
+        // Favicon 마이그레이션 (비동기, 비차단)
+        migrateFavicons()
+          .then(() => {
+            console.log('✅ Favicon 마이그레이션 완료')
+          })
+          .catch(error => {
+            console.warn('⚠️ Favicon 마이그레이션 실패 (무시됨):', error)
+            if (error instanceof SyntaxError) {
+              console.error('📍 Favicon 마이그레이션 중 SyntaxError:', error.message)
+            }
+          })
+
+      } catch (criticalError) {
+        console.error('💥 앱 초기화 치명적 실패:', criticalError)
+
+        if (criticalError instanceof SyntaxError) {
+          console.error('📍 초기화 중 SyntaxError 발생:', {
+            message: criticalError.message,
+            stack: criticalError.stack,
+            name: criticalError.name
+          })
+        }
+
+        // 사용자에게 명확한 오류 상황 알림 (추후 에러 상태 관리 개선 시 활용)
+        console.error('🔧 문제 해결 방법:', {
+          '1': '브라우저 새로고침 시도',
+          '2': '브라우저 개발자 도구 콘솔에서 상세 오류 확인',
+          '3': '지속적인 문제 시 브라우저 캐시 및 로컬 스토리지 정리'
+        })
       }
 
-      // 기존 북마크들의 favicon 마이그레이션 (백그라운드에서 실행)
-      try {
-        await migrateFavicons()
-      } catch (error) {
-        console.warn('Favicon migration failed:', error)
-      }
+      console.log('🎉 앱 초기화 프로세스 완료')
     }
 
     initializeApp()
