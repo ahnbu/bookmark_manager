@@ -51,6 +51,7 @@ interface BookmarkStore {
   getBookmarksByCategory: (categoryId: string) => Bookmark[]
   getHiddenBookmarksByCategory: (categoryId: string) => Bookmark[]
   getVisibleCategories: () => Category[]
+  getFilteredCategories: (selectedFilters: string[]) => Category[]
   getCategoryById: (id: string) => Category | undefined
   getBookmarkById: (id: string) => Bookmark | undefined
 }
@@ -751,6 +752,21 @@ export const useBookmarkStore = create<BookmarkStore>((set, get) => ({
     return categories
       .filter((category) => !category.isHidden)
       .sort((a, b) => a.order - b.order)
+  },
+
+  getFilteredCategories: (selectedFilters) => {
+    const { categories } = get()
+    const visibleCategories = categories
+      .filter((category) => !category.isHidden)
+      .sort((a, b) => a.order - b.order)
+
+    if (selectedFilters.length === 0) {
+      return visibleCategories
+    }
+
+    return visibleCategories.filter((category) =>
+      selectedFilters.includes(category.id)
+    )
   },
 
   getCategoryById: (id) => {

@@ -6,6 +6,7 @@ import { useSettingsStore } from '@/store/settingsStore'
 import { DragDropProvider } from '@/components/DragDropProvider'
 import { CategoryList } from '@/components/CategoryList'
 import { MasonryGrid } from '@/components/MasonryGrid'
+import { CategoryFilter } from '@/components/CategoryFilter'
 import { AddCategory } from '@/components/AddCategory'
 import { AddBookmark } from '@/components/AddBookmark'
 import { SettingsPanel } from '@/components/SettingsPanel'
@@ -13,10 +14,11 @@ import { Toaster } from '@/components/ui/toaster'
 import { Bookmark } from 'lucide-react'
 
 export default function Home() {
-  const { categories, getVisibleCategories, loadData, isLoading, migrateFavicons } = useBookmarkStore()
-  const { settings, loadSettings, migrateToSupabase } = useSettingsStore()
+  const { categories, getVisibleCategories, getFilteredCategories, loadData, isLoading, migrateFavicons } = useBookmarkStore()
+  const { settings, selectedCategoryFilters, loadSettings, migrateToSupabase } = useSettingsStore()
 
   const visibleCategories = getVisibleCategories()
+  const filteredCategories = getFilteredCategories(selectedCategoryFilters)
 
   useEffect(() => {
     const initializeApp = async () => {
@@ -133,14 +135,25 @@ export default function Home() {
             </div>
           </div>
 
+          {/* Category Filter */}
+          <CategoryFilter />
 
           {/* Categories Grid */}
-          {visibleCategories.length > 0 ? (
+          {filteredCategories.length > 0 ? (
             settings.enableMasonryGrid ? (
-              <MasonryGrid categories={visibleCategories} />
+              <MasonryGrid categories={filteredCategories} />
             ) : (
-              <CategoryList categories={visibleCategories} gridCols={getGridCols()} />
+              <CategoryList categories={filteredCategories} gridCols={getGridCols()} />
             )
+          ) : visibleCategories.length > 0 ? (
+            <div className="text-center py-12">
+              <div className="max-w-md mx-auto">
+                <h3 className="text-lg font-medium mb-2">선택한 카테고리에 북마크가 없습니다</h3>
+                <p className="text-muted-foreground">
+                  다른 카테고리를 선택하거나 전체 보기를 클릭해보세요.
+                </p>
+              </div>
+            </div>
           ) : (
             <div className="text-center py-12">
               <div className="max-w-md mx-auto">

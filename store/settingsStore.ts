@@ -5,10 +5,13 @@ import { getSettings, updateSettings as dbUpdateSettings } from '@/lib/database'
 
 interface SettingsStore {
   settings: Settings
+  selectedCategoryFilters: string[]
   updateSettings: (updates: Partial<Settings>) => Promise<void>
   loadSettings: () => Promise<void>
   resetSettings: () => Promise<void>
   migrateToSupabase: () => Promise<void>
+  toggleCategoryFilter: (categoryId: string) => void
+  clearCategoryFilters: () => void
   isLoading: boolean
   error: string | null
 }
@@ -25,6 +28,7 @@ const defaultSettings: Settings = {
 
 export const useSettingsStore = create<SettingsStore>((set, get) => ({
   settings: defaultSettings,
+  selectedCategoryFilters: [],
   isLoading: false,
   error: null,
 
@@ -150,5 +154,18 @@ export const useSettingsStore = create<SettingsStore>((set, get) => ({
       console.error('Failed to migrate settings:', error)
       set({ error: '설정 마이그레이션에 실패했습니다.', isLoading: false })
     }
+  },
+
+  toggleCategoryFilter: (categoryId) => {
+    const currentFilters = get().selectedCategoryFilters
+    const newFilters = currentFilters.includes(categoryId)
+      ? currentFilters.filter(id => id !== categoryId)
+      : [...currentFilters, categoryId]
+
+    set({ selectedCategoryFilters: newFilters })
+  },
+
+  clearCategoryFilters: () => {
+    set({ selectedCategoryFilters: [] })
   },
 }))

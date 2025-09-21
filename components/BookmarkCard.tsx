@@ -43,7 +43,7 @@ export function BookmarkCard({ bookmark, onModalStateChange, dragHandleProps, de
   const [editData, setEditData] = useState({
     name: currentBookmark.name,
     url: currentBookmark.url,
-    description: currentBookmark.description || '',
+    description: currentBookmark.description ?? '',
     isFavorite: currentBookmark.isFavorite || false,
     categoryId: currentBookmark.categoryId,
   })
@@ -53,7 +53,7 @@ export function BookmarkCard({ bookmark, onModalStateChange, dragHandleProps, de
     setEditData({
       name: currentBookmark.name,
       url: currentBookmark.url,
-      description: currentBookmark.description || '',
+      description: currentBookmark.description ?? '',
       isFavorite: currentBookmark.isFavorite || false,
       categoryId: currentBookmark.categoryId,
     })
@@ -111,7 +111,12 @@ export function BookmarkCard({ bookmark, onModalStateChange, dragHandleProps, de
       updateBookmark(currentBookmark.id, {
         name: editData.name.trim(),
         url: editData.url.trim(),
-        description: editData.description.trim() || undefined,
+
+        // 비어있는 메모 저장 안되는 문제 해결
+        // description: editData.description.trim() ? editData.description.trim() : undefined,
+        description: editData.description.trim() ? editData.description.trim() : null,
+
+        // ✅ 수정할 코드
         isFavorite: editData.isFavorite,
         // categoryId는 moveBookmark에서 처리하므로 카테고리 변경이 없을 때만 포함
         ...(categoryChanged ? {} : { categoryId: editData.categoryId }),
@@ -140,7 +145,7 @@ export function BookmarkCard({ bookmark, onModalStateChange, dragHandleProps, de
     setEditData({
       name: currentBookmark.name,
       url: currentBookmark.url,
-      description: currentBookmark.description || '',
+      description: currentBookmark.description ?? '',
       isFavorite: currentBookmark.isFavorite || false,
       categoryId: currentBookmark.categoryId,
     })
