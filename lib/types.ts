@@ -2,7 +2,8 @@ export interface Bookmark {
   id: string
   name: string
   url: string
-  description?: string
+  // description?: string
+  description?: string | null 
   favicon?: string
   categoryId: string
   order: number
