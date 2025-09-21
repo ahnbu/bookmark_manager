@@ -10,7 +10,8 @@ export interface DbBookmark {
   id: string
   name: string
   url: string
-  description?: string
+  // description?: string
+  description?: string | null
   favicon?: string
   category_id: string
   order: number
