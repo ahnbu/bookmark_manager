@@ -144,35 +144,36 @@ export function AddBookmark({ defaultCategoryId, children }: AddBookmarkProps) {
               value={formData.description}
               onChange={(e) => setFormData({ ...formData, description: e.target.value })}
               placeholder="북마크에 대한 설명을 입력하세요"
-              rows={3}
+              rows={2}
             />
           </div>
 
-          <div className="flex items-center space-x-2">
-            <Switch
-              id="bookmark-favorite"
-              checked={formData.isFavorite}
-              onCheckedChange={(checked) => setFormData({ ...formData, isFavorite: checked })}
-            />
-            <Label htmlFor="bookmark-favorite" className="text-sm font-medium">
-              즐겨찾기
-            </Label>
-          </div>
-
-          <div className="flex justify-end gap-2">
-            <Button
-              type="button"
-              variant="outline"
-              onClick={() => setIsOpen(false)}
-            >
-              취소
-            </Button>
-            <Button
-              type="submit"
-              disabled={!formData.name.trim() || !formData.url.trim() || !selectedCategoryId}
-            >
-              추가
-            </Button>
+          <div className="flex items-center justify-between">
+            <div className="flex items-center space-x-2">
+              <Switch
+                id="bookmark-favorite"
+                checked={formData.isFavorite}
+                onCheckedChange={(checked) => setFormData({ ...formData, isFavorite: checked })}
+              />
+              <Label htmlFor="bookmark-favorite" className="text-sm font-medium">
+                즐겨찾기
+              </Label>
+            </div>
+            <div className="flex gap-2">
+              <Button
+                type="button"
+                variant="outline"
+                onClick={() => setIsOpen(false)}
+              >
+                취소
+              </Button>
+              <Button
+                type="submit"
+                disabled={!formData.name.trim() || !formData.url.trim() || !selectedCategoryId}
+              >
+                추가
+              </Button>
+            </div>
           </div>
         </form>
       </DialogContent>

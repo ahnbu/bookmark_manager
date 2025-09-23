@@ -532,29 +532,31 @@ export function BookmarkCard({ bookmark, onModalStateChange, dragHandleProps, de
                 onChange={(e) => setEditData({ ...editData, description: e.target.value })}
                 onKeyDown={handleTextareaKeyDown}
                 placeholder="북마크에 대한 설명을 입력하세요 (Ctrl+Enter로 저장)"
-                rows={3}
+                rows={2}
               />
             </div>
-            <div className="flex items-center space-x-2">
-              <Switch
-                id="edit-favorite"
-                checked={editData.isFavorite}
-                onCheckedChange={(checked) => setEditData({ ...editData, isFavorite: checked })}
-              />
-              <Label htmlFor="edit-favorite" className="text-sm font-medium">
-                즐겨찾기
-              </Label>
-            </div>
-            <div className="flex justify-end gap-2">
-              <Button variant="outline" onClick={handleCancelEdit}>
-                취소
-              </Button>
-              <Button
-                onClick={handleSaveEdit}
-                disabled={!editData.name.trim() || !editData.url.trim()}
-              >
-                저장
-              </Button>
+            <div className="flex items-center justify-between">
+              <div className="flex items-center space-x-2">
+                <Switch
+                  id="edit-favorite"
+                  checked={editData.isFavorite}
+                  onCheckedChange={(checked) => setEditData({ ...editData, isFavorite: checked })}
+                />
+                <Label htmlFor="edit-favorite" className="text-sm font-medium">
+                  즐겨찾기
+                </Label>
+              </div>
+              <div className="flex gap-2">
+                <Button variant="outline" onClick={handleCancelEdit}>
+                  취소
+                </Button>
+                <Button
+                  onClick={handleSaveEdit}
+                  disabled={!editData.name.trim() || !editData.url.trim()}
+                >
+                  저장
+                </Button>
+              </div>
             </div>
           </div>
         </DialogContent>

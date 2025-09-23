@@ -229,6 +229,7 @@ export const updateBookmark = async (id: string, updates: Partial<Bookmark>): Pr
   if (updates.isBlacklisted !== undefined) updateData.is_blacklisted = updates.isBlacklisted
   if (updates.customFavicon !== undefined) updateData.custom_favicon = updates.customFavicon
   if (updates.isFavorite !== undefined) updateData.is_favorite = updates.isFavorite
+  if (updates.isHidden !== undefined) updateData.is_hidden = updates.isHidden
 
   const { data, error } = await supabase
     .from('bookmarks')
