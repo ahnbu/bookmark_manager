@@ -38,5 +38,15 @@ next-env.d.ts
 # 사용자 제외 요청
 /temp
 
-_handoff/
 
+.playwright-cli/
+.bkit/
+.pdca-status
+.pdca-status.json
+.bkit-memory
+.bkit-memory.json
+.pdca-snapshots
+.current-session-id
+.env
+temp/
+.temp/
