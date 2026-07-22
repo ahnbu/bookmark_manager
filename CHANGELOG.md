@@ -4,6 +4,7 @@
 
 | 일시 | 유형 | 범위 | 변경내용 (목적 포함) |
 |---|---|---|---|
+| 2026-07-22 17:55 | fix | pnpm-policy | preinstall 가드가 pnpm 자신을 차단하던 버그 수정 — npm_execpath 폴백 검사 추가 |
 | 2026-07-22 17:04 | chore | pnpm-policy | packageManager 고정 및 preinstall 가드 추가 — npm/yarn 혼용 차단 |
 | 2026-07-22 15:50 | docs | readme | 배포 정보 절 추가 - Supabase 프로젝트 삭제로 서비스 사망 상태 및 복구 절차 기록 |
 | 2026-07-19 12:47 | docs | rules | AGENTS.md 정본화 + CLAUDE.md를 @AGENTS.md 포인터로 전환 |
