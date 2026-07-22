@@ -1,5 +1,27 @@
 # 북마크 관리자 (Bookmark Manager)
 
+## 서비스 정보
+
+> 최종 확인: 2026-07-22
+
+| 항목 | 값 |
+|---|---|
+| 서비스 URL | https://mybookmark-manager.netlify.app/ |
+| 상태 | 🔴 **사실상 사망** — 페이지는 열리나 데이터를 불러올 수 없음 |
+| 사망 원인 | **연결된 Supabase 프로젝트가 삭제됨.** DNS 조회 자체가 실패(`Non-existent domain`)하며 데이터도 남아 있지 않다 |
+| 복구 조건 | Supabase 프로젝트 신규 생성 → 스키마 재적용 → `NEXT_PUBLIC_SUPABASE_*` 갱신 후 재배포 |
+| 호스팅 | Netlify (`netlify.toml`, `publish = "out"`) |
+| DB | Supabase (Postgres) — ⚠️ 현재 대상 프로젝트 부재 |
+| 인증 | ❌ 없음 (Supabase를 DB로만 사용) |
+| 외부 API | 파비콘 프록시 Worker — https://favicon-proxy.byungwook-an.workers.dev/ |
+| 배포 방식 | Netlify 자동 빌드 (`npm run build` → `out/`) |
+| 필요 환경변수 | `NEXT_PUBLIC_SUPABASE_URL`, `NEXT_PUBLIC_SUPABASE_ANON_KEY` |
+
+> ⚠️ `bookmark-manager.netlify.app`(접두사 `my` 없음)은 **무관한 타인의 서비스**다. 혼동하지 말 것.
+> `NEXT_PUBLIC_*` 키는 설계상 클라이언트에 노출되므로 **Supabase RLS 정책 설정이 전제**된다. 복구 시 반드시 확인할 것.
+
+---
+
 브라우저 북마크를 효율적으로 관리할 수 있는 현대적인 웹 애플리케이션입니다.
 
 ![Next.js](https://img.shields.io/badge/Next.js-15.1.2-black?logo=next.js)
